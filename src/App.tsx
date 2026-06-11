@@ -78,6 +78,8 @@ import {
   Printer,
   Download,
   Check,
+  AlertTriangle,
+  MapPin,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import jsQR from "jsqr";
@@ -348,6 +350,19 @@ interface MaintenanceTask {
   performer: string;
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   notes: string;
+}
+
+interface FacilityIncident {
+  id: number;
+  equipmentId?: number;
+  equipmentName: string;
+  location: string;
+  reporter: string;
+  description: string;
+  reportedDate: string;
+  severity: "LOW" | "MEDIUM" | "HIGH";
+  status: "NEW" | "IN_PROGRESS" | "RESOLVED";
+  resolutionNotes?: string;
 }
 
 interface ConfirmDialog {
@@ -1874,7 +1889,7 @@ export default function App() {
            u.email?.toLowerCase().endsWith("@fit.com") ||
            u.fullName?.toLowerCase().endsWith("@fit.com");
   };
-  const [activeTab, setActiveTab] = useState<"dashboard" | "members" | "pt" | "staff" | "pos" | "treasury" | "memberSales" | "invoice-sales" | "invoice-member" | "invoice-expiring" | "invoice-expired" | "facilities" | "maintenance" | "evaluations" | "packages" | "memberPortal" | "finance" | "memberAccounts" | "settings" | "invoices" | "aiAnalytics" | "communication" | "staffReport" | "serviceReport" | "pos-products" | "pos-inventory" | "pos-purchase" | "pos-receive" | "pos-history" | "pos-adjust" | "pos-report">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "members" | "pt" | "staff" | "pos" | "treasury" | "memberSales" | "invoice-sales" | "invoice-member" | "invoice-expiring" | "invoice-expired" | "facilities" | "maintenance" | "incidents" | "facility-reports" | "evaluations" | "packages" | "memberPortal" | "finance" | "memberAccounts" | "settings" | "invoices" | "aiAnalytics" | "communication" | "staffReport" | "serviceReport" | "pos-products" | "pos-inventory" | "pos-purchase" | "pos-receive" | "pos-history" | "pos-adjust" | "pos-report">("dashboard");
   const [invoiceSubTab, setInvoiceSubTab] = useState<"sales" | "member" | "expiring" | "expired">("sales");
   const [openActionMenuId, setOpenActionMenuId] = useState<number | null>(null);
 
@@ -2028,12 +2043,32 @@ export default function App() {
   const [editingMaintenance, setEditingMaintenance] = useState<MaintenanceTask | null>(null);
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [maintenanceTasks, setMaintenanceTasks] = useState<MaintenanceTask[]>([]);
+  const [incidents, setIncidents] = useState<FacilityIncident[]>([]);
+  const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
+  const [editingIncident, setEditingIncident] = useState<FacilityIncident | null>(null);
+  const [incidentSearch, setIncidentSearch] = useState("");
+  const [incidentSeverityFilter, setIncidentSeverityFilter] = useState<string>("ALL");
+  const [incidentStatusFilter, setIncidentStatusFilter] = useState<string>("ALL");
+  const [newIncident, setNewIncident] = useState<Partial<FacilityIncident>>({
+    equipmentName: "",
+    location: "",
+    reporter: "",
+    description: "",
+    severity: "MEDIUM",
+    status: "NEW",
+    resolutionNotes: ""
+  });
   const [equipmentSearch, setEquipmentSearch] = useState("");
+  const [selectedEquipmentLocation, setSelectedEquipmentLocation] = useState<string>("ALL");
+  const [areaSubFilters, setAreaSubFilters] = useState<{[key: string]: string}>({});
   const [searchMemberCode, setSearchMemberCode] = useState("");
   const [foundMember, setFoundMember] = useState<any | null>(null);
   const [searchError, setSearchError] = useState("");
   const [accountsSearchQuery, setAccountsSearchQuery] = useState("");
   const [facilitiesSubTab, setFacilitiesSubTab] = useState<"assets" | "maintenance">("assets");
+  const [facilitiesType, setFacilitiesType] = useState<"ALL" | "TRAINING" | "INTERIOR">("ALL");
+  const [isFacilitiesTypeDropdownOpen, setIsFacilitiesTypeDropdownOpen] = useState(false);
+  const [isFacilitiesSubmenuOpen, setIsFacilitiesSubmenuOpen] = useState(false);
   const [newStaff, setNewStaff] = useState<Partial<StaffMember>>({
     fullName: "",
     role: "STAFF",
@@ -2811,6 +2846,91 @@ export default function App() {
         history: [
           { date: "2026-05-10", action: "Ghi nhận hỏng", note: "Bàn đạp có tiếng kêu" }
         ]
+      },
+      {
+        id: 4,
+        name: "Bộ tạ tay cao su Jordan 5kg - 30kg",
+        code: "EQU-DUMB-002",
+        category: "Tự do",
+        status: "NORMAL",
+        purchaseDate: "2025-04-10",
+        lastMaintenance: "2026-04-10",
+        nextMaintenance: "2026-10-10",
+        location: "Khu vực tạ A",
+        history: [
+          { date: "2025-04-10", action: "Lắp đặt", note: "Kệ tạ và tạ tay mới" }
+        ]
+      },
+      {
+        id: 5,
+        name: "Tạ đòn Olympic Impulse 2.2m",
+        code: "EQU-BAR-003",
+        category: "Tự do",
+        status: "NORMAL",
+        purchaseDate: "2025-04-12",
+        lastMaintenance: "2026-04-10",
+        nextMaintenance: "2026-10-10",
+        location: "Khu vực tạ B",
+        history: [
+          { date: "2025-04-12", action: "Lắp đặt", note: "Thanh đòn tiêu chuẩn" }
+        ]
+      },
+      {
+        id: 6,
+        name: "Điều hòa Daikin Inverter 2.5 HP",
+        code: "EQU-AC-001",
+        category: "Nội thất",
+        status: "NORMAL",
+        purchaseDate: "2025-01-10",
+        lastMaintenance: "2026-03-15",
+        nextMaintenance: "2026-09-15",
+        location: "Khu vực Cardio A",
+        history: [
+          { date: "2025-01-10", action: "Lắp đặt", note: "Máy lạnh trung tâm" },
+          { date: "2026-03-15", action: "Bảo dưỡng", note: "Vệ sinh lưới lọc" }
+        ]
+      },
+      {
+        id: 7,
+        name: "Camera giám sát Hikvision IP 4MP",
+        code: "EQU-CAM-001",
+        category: "Nội thất",
+        status: "NORMAL",
+        purchaseDate: "2025-01-12",
+        lastMaintenance: "2026-01-15",
+        nextMaintenance: "2027-01-15",
+        location: "Khu vực Cardio A",
+        history: [
+          { date: "2025-01-12", action: "Lắp đặt", note: "Camera góc rộng" }
+        ]
+      },
+      {
+        id: 8,
+        name: "Đèn LED sấy hồng ngoại",
+        code: "EQU-LIGHT-001",
+        category: "Nội thất",
+        status: "NORMAL",
+        purchaseDate: "2025-02-15",
+        lastMaintenance: "2026-02-10",
+        nextMaintenance: "2026-08-10",
+        location: "Khu vực tạ A",
+        history: [
+          { date: "2025-02-15", action: "Lắp đặt", note: "Hệ thống sấy ấm hồng ngoại" }
+        ]
+      },
+      {
+        id: 9,
+        name: "Tủ locker sắt khóa từ 18 ngăn",
+        code: "EQU-LOCKER-001",
+        category: "Nội thất",
+        status: "NORMAL",
+        purchaseDate: "2025-01-10",
+        lastMaintenance: "2025-01-10",
+        nextMaintenance: "2027-01-10",
+        location: "Khu vực lễ tân",
+        history: [
+          { date: "2025-01-10", action: "Lắp đặt", note: "Tủ đựng đồ hội viên" }
+        ]
       }
     ]);
 
@@ -2836,6 +2956,43 @@ export default function App() {
         performer: "Nguyễn Văn Chuyển",
         status: "IN_PROGRESS",
         notes: "Sửa bàn đạp kêu"
+      }
+    ]);
+
+    setIncidents([
+      {
+        id: 1,
+        equipmentId: 3,
+        equipmentName: "Xe đạp tập thể dục Spin Bike",
+        location: "Khu vực Cardio B",
+        reporter: "Nguyễn Văn Chuyển (Kỹ thuật)",
+        description: "Bàn đạp bên trái bị kẹt cứng không quay được",
+        reportedDate: "2026-05-10",
+        severity: "HIGH",
+        status: "RESOLVED",
+        resolutionNotes: "Đã bôi dầu trơn và thay ổ bi mới vào ngày 12/05/2026."
+      },
+      {
+        id: 2,
+        equipmentId: 1,
+        equipmentName: "Máy chạy bộ Matrix T50",
+        location: "Khu vực Cardio A",
+        reporter: "Hoàng Nam PT",
+        description: "Màn hình cảm ứng bị chập chờn phím đổi độ dốc, thỉnh thoảng mất cảm ứng ở góc trái dưới.",
+        reportedDate: "2026-06-08",
+        severity: "LOW",
+        status: "NEW"
+      },
+      {
+        id: 3,
+        equipmentId: 2,
+        equipmentName: "Giàn tạ đa năng Impulse",
+        location: "Khu tạ tự do A",
+        reporter: "Trực ca hỗ trợ",
+        description: "Dây cáp nâng tạ bị xơ nhẹ cần thay dây cáp và kiểm tra bánh ròng rọc kéo tạ.",
+        reportedDate: "2026-06-10",
+        severity: "MEDIUM",
+        status: "IN_PROGRESS"
       }
     ]);
   }, []);
@@ -4641,6 +4798,52 @@ export default function App() {
       () => {
         setMaintenanceTasks(prev => prev.filter(task => task.id !== id));
         addNotification(t('success'));
+      }
+    );
+  };
+
+  const handleIncidentSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (editingIncident) {
+      setIncidents(prev => prev.map(inc => inc.id === editingIncident.id ? editingIncident : inc));
+      
+      // Auto revert corresponding equipment status to NORMAL if resolved
+      if (editingIncident.status === "RESOLVED") {
+        const matchingEq = equipments.find(eq => eq.name.toLowerCase() === editingIncident.equipmentName.toLowerCase());
+        if (matchingEq) {
+          setEquipments(prev => prev.map(eq => eq.id === matchingEq.id ? { ...eq, status: "NORMAL" } : eq));
+        }
+      }
+      
+      addNotification("Cập nhật sự cố thành công!");
+    } else {
+      const inc = { 
+        ...newIncident, 
+        id: Date.now(), 
+        reportedDate: new Date().toISOString().split('T')[0]
+      } as FacilityIncident;
+      setIncidents(prev => [inc, ...prev]);
+      addNotification("Báo cáo sự cố thành công!");
+      setNewIncident({
+        equipmentName: "",
+        location: "",
+        reporter: user?.fullName || "",
+        description: "",
+        severity: "MEDIUM",
+        status: "NEW",
+        resolutionNotes: ""
+      });
+    }
+    setIsIncidentModalOpen(false);
+  };
+
+  const handleDeleteIncident = (id: number) => {
+    confirmAction(
+      t('confirmAction'),
+      "Xác nhận xóa biên bản sự cố này?",
+      () => {
+        setIncidents(prev => prev.filter(inc => inc.id !== id));
+        addNotification("Xóa sự cố thành công!");
       }
     );
   };
@@ -8961,7 +9164,7 @@ export default function App() {
                 },
                 { 
                   id: "inventoryMgmt", 
-                  label: lang === 'vi' ? 'Quản lý sản phẩm' : (lang === 'zh' ? '产品与库存' : 'Products & Stock'), 
+                  label: lang === 'vi' ? (user?.role === "ADMIN" ? 'Quản lý sản phẩm' : 'Sản phẩm') : (lang === 'zh' ? '产品与库存' : 'Products & Stock'), 
                   icon: Package, 
                   role: "STAFF",
                   subItems: [
@@ -8970,8 +9173,8 @@ export default function App() {
                     { id: "pos-purchase", label: lang === 'vi' ? 'Mua hàng' : (lang === 'zh' ? '采购订单' : 'Purchase Orders'), icon: ShoppingCart },
                     { id: "pos-receive", label: lang === 'vi' ? 'Nhập hàng' : (lang === 'zh' ? '采购入库' : 'Receive Stock'), icon: ArrowDown },
                     { id: "pos-history", label: lang === 'vi' ? 'Lịch sử kho' : (lang === 'zh' ? '库存日志' : 'Inventory Logs'), icon: History },
-                    { id: "pos-adjust", label: lang === 'vi' ? 'Điều chỉnh kho' : (lang === 'zh' ? '库存盘点' : 'Adjustments'), icon: Settings },
-                    { id: "pos-report", label: lang === 'vi' ? 'Báo cáo kho' : (lang === 'zh' ? '库存报表' : 'Reports'), icon: BarChart3 }
+                    { id: "pos-adjust", label: lang === 'vi' ? 'Điều chỉnh kho' : (lang === 'zh' ? '库存盘点' : 'Adjustments'), icon: Settings, role: "ADMIN" },
+                    { id: "pos-report", label: lang === 'vi' ? 'Báo cáo kho' : (lang === 'zh' ? '库存报表' : 'Reports'), icon: BarChart3, role: "ADMIN" }
                   ]
                 },
                 { 
@@ -9017,8 +9220,10 @@ export default function App() {
                   icon: Box, 
                   role: "ADMIN_OR_STAFF",
                   subItems: [
-                    { id: "facilities", label: t('assets'), icon: Box },
-                    { id: "maintenance", label: t('maintenance'), icon: Calendar },
+                    { id: "facilities", label: lang === 'vi' ? 'Cơ sở vật chất' : (lang === 'zh' ? '基础设施' : 'Facilities'), icon: Box },
+                    { id: "incidents", label: lang === 'vi' ? 'Sự cố' : (lang === 'zh' ? '设备故障' : 'Incidents'), icon: AlertCircle },
+                    { id: "maintenance", label: lang === 'vi' ? 'Bảo trì' : (lang === 'zh' ? '设备维护' : 'Maintenance'), icon: Calendar },
+                    { id: "facility-reports", label: lang === 'vi' ? 'Báo cáo' : (lang === 'zh' ? '维护报表' : 'Reports'), icon: BarChart3 }
                   ]
                 },
                 { id: "communication", label: t('communication'), icon: MessageCircle, role: "STAFF" },
@@ -9089,7 +9294,7 @@ export default function App() {
                       }
                     }}
                     className={`w-full flex items-center justify-between px-6 py-4 rounded-[1.5rem] transition-all group relative overflow-hidden ${
-                      activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab)) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
+                      activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab || (activeTab === "facilities" && si.id.startsWith("facilities-")))) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
                         ? item.subItems ? "bg-white/5 text-white" : "bg-[#CCFF00] text-black shadow-[0_20px_40px_rgba(204,255,0,0.1)]"
                         : "text-zinc-600 hover:text-white hover:bg-white/5"
                     }`}
@@ -9104,7 +9309,7 @@ export default function App() {
                     <div className="flex items-center gap-4 relative z-10">
                       <item.icon
                         className={`w-5 h-5 transition-colors ${
-                          activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab)) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
+                          activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab || (activeTab === "facilities" && si.id.startsWith("facilities-")))) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
                             ? item.subItems ? "text-[#CCFF00]" : "text-black"
                             : "text-zinc-700 group-hover:text-zinc-400"
                         }`}
@@ -9136,32 +9341,91 @@ export default function App() {
                           if (sub.role === "ADMIN" && user?.role === "ADMIN") return true;
                           if (sub.role === "ADMIN_OR_STAFF" && (user?.role === "ADMIN" || user?.role === "STAFF" || user?.role === "RECEPTIONIST")) return true;
                           return sub.role === user.role;
-                        }).map((sub: any) => (
-                          <button
-                            key={sub.id}
-                            onClick={() => {
-                              if (sub.id === "facilities") {
-                                setActiveTab("facilities");
-                              } else if (sub.id === "maintenance") {
-                                setActiveTab("maintenance");
-                              } else if (sub.action) {
-                                sub.action();
-                              } else {
-                                setActiveTab(sub.id as any);
-                              }
-                            }}
-                            className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-left text-sm font-black uppercase tracking-widest transition-all ${
-                              activeTab === sub.id ? 'text-[#CCFF00] bg-[#CCFF00]/5' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
-                            } ${(sub as any).action ? 'text-[#CCFF00]/80 mt-1 mb-2 border border-[#CCFF00]/10 hover:border-[#CCFF00]/30 bg-[#CCFF00]/5' : ''}`}
-                          >
-                            {(sub as any).action ? (
-                              <Plus className="w-3.5 h-3.5" />
-                            ) : (
-                              <div className={`w-1.5 h-1.5 rounded-full ${activeTab === sub.id ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
-                            )}
-                            {sub.label}
-                          </button>
-                        ))}
+                        }).map((sub: any) => {
+                          if (sub.id === "facilities") {
+                            const isSubActive = activeTab === "facilities";
+                            const isTrainingActive = activeTab === "facilities" && facilitiesType === "TRAINING";
+                            const isInteriorActive = activeTab === "facilities" && facilitiesType === "INTERIOR";
+                            const isAllActive = activeTab === "facilities" && facilitiesType === "ALL";
+
+                            return (
+                              <div key={sub.id} className="flex flex-col gap-1 w-full">
+                                <button
+                                  onClick={() => {
+                                    setActiveTab("facilities");
+                                    setFacilitiesType("ALL");
+                                    setIsFacilitiesSubmenuOpen(!isFacilitiesSubmenuOpen);
+                                  }}
+                                  className={`w-full flex items-center justify-between py-2.5 px-4 rounded-xl text-left text-sm font-black uppercase tracking-widest transition-all ${
+                                    isSubActive && facilitiesType === "ALL" ? 'text-[#CCFF00] bg-[#CCFF00]/5' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isSubActive && facilitiesType === "ALL" ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+                                    {sub.label}
+                                  </div>
+                                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFacilitiesSubmenuOpen ? "rotate-180 text-[#CCFF00]" : "text-zinc-600"}`} />
+                                </button>
+                                
+                                {isFacilitiesSubmenuOpen && (
+                                  <div className="flex flex-col gap-1 pl-6">
+                                    <button
+                                      onClick={() => {
+                                        setActiveTab("facilities");
+                                        setFacilitiesType("TRAINING");
+                                      }}
+                                      className={`w-full flex items-center gap-3 py-2 px-3 rounded-lg text-left text-xs font-black uppercase tracking-widest transition-all ${
+                                        isTrainingActive ? 'text-[#CCFF00] bg-[#CCFF00]/5' : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+                                      }`}
+                                    >
+                                      <div className={`w-1 h-1 rounded-full ${isTrainingActive ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+                                      {lang === 'vi' ? 'Thiết bị tập luyện' : 'Workout Equipment'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setActiveTab("facilities");
+                                        setFacilitiesType("INTERIOR");
+                                      }}
+                                      className={`w-full flex items-center gap-3 py-2 px-3 rounded-lg text-left text-xs font-black uppercase tracking-widest transition-all ${
+                                        isInteriorActive ? 'text-[#CCFF00] bg-[#CCFF00]/5' : 'text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+                                      }`}
+                                    >
+                                      <div className={`w-1 h-1 rounded-full ${isInteriorActive ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+                                      {lang === 'vi' ? 'Thiết bị nội thất' : 'Interior Equipment'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
+                          const isSubActive = activeTab === sub.id;
+
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => {
+                                if (sub.id === "maintenance") {
+                                  setActiveTab("maintenance");
+                                } else if (sub.action) {
+                                  sub.action();
+                                } else {
+                                  setActiveTab(sub.id as any);
+                                }
+                              }}
+                              className={`w-full flex items-center gap-3 py-2.5 px-4 rounded-xl text-left text-sm font-black uppercase tracking-widest transition-all ${
+                                isSubActive ? 'text-[#CCFF00] bg-[#CCFF00]/5' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
+                              } ${(sub as any).action ? 'text-[#CCFF00]/80 mt-1 mb-2 border border-[#CCFF00]/10 hover:border-[#CCFF00]/30 bg-[#CCFF00]/5' : ''}`}
+                            >
+                              {(sub as any).action ? (
+                                <Plus className="w-3.5 h-3.5" />
+                              ) : (
+                                <div className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
+                              )}
+                              {sub.label}
+                            </button>
+                          );
+                        })}
                     </motion.div>
                   )}
                 </div>
@@ -9235,7 +9499,7 @@ export default function App() {
                     },
                     { 
                       id: "inventoryMgmt", 
-                      label: lang === 'vi' ? 'Quản lý sản phẩm' : (lang === 'zh' ? '产品与库存' : 'Products & Stock'), 
+                      label: lang === 'vi' ? (user?.role === "ADMIN" ? 'Quản lý sản phẩm' : 'Sản phẩm') : (lang === 'zh' ? '产品与库存' : 'Products & Stock'), 
                       icon: Package, 
                       role: "STAFF",
                       subItems: [
@@ -9244,8 +9508,8 @@ export default function App() {
                         { id: "pos-purchase", label: lang === 'vi' ? 'Mua hàng' : (lang === 'zh' ? '采购订单' : 'Purchase Orders'), icon: ShoppingCart },
                         { id: "pos-receive", label: lang === 'vi' ? 'Nhập hàng' : (lang === 'zh' ? '采购入库' : 'Receive Stock'), icon: ArrowDown },
                         { id: "pos-history", label: lang === 'vi' ? 'Lịch sử kho' : (lang === 'zh' ? '库存日志' : 'Inventory Logs'), icon: History },
-                        { id: "pos-adjust", label: lang === 'vi' ? 'Điều chỉnh kho' : (lang === 'zh' ? '库存盘点' : 'Adjustments'), icon: Settings },
-                        { id: "pos-report", label: lang === 'vi' ? 'Báo cáo kho' : (lang === 'zh' ? '库存报表' : 'Reports'), icon: BarChart3 }
+                        { id: "pos-adjust", label: lang === 'vi' ? 'Điều chỉnh kho' : (lang === 'zh' ? '库存盘点' : 'Adjustments'), icon: Settings, role: "ADMIN" },
+                        { id: "pos-report", label: lang === 'vi' ? 'Báo cáo kho' : (lang === 'zh' ? '库存报表' : 'Reports'), icon: BarChart3, role: "ADMIN" }
                       ]
                     },
                     { 
@@ -9291,8 +9555,10 @@ export default function App() {
                       icon: Box, 
                       role: "ADMIN_OR_STAFF",
                       subItems: [
-                        { id: "facilities", label: t('assets'), icon: Box },
-                        { id: "maintenance", label: t('maintenance'), icon: Calendar },
+                        { id: "facilities", label: lang === 'vi' ? 'Cơ sở vật chất' : (lang === 'zh' ? '基础设施' : 'Facilities'), icon: Box },
+                        { id: "incidents", label: lang === 'vi' ? 'Sự cố' : (lang === 'zh' ? '设备故障' : 'Incidents'), icon: AlertCircle },
+                        { id: "maintenance", label: lang === 'vi' ? 'Bảo trì' : (lang === 'zh' ? '设备维护' : 'Maintenance'), icon: Calendar },
+                        { id: "facility-reports", label: lang === 'vi' ? 'Báo cáo' : (lang === 'zh' ? '维护 report' : 'Reports'), icon: BarChart3 }
                       ]
                     },
                     { id: "communication", label: t('communication'), icon: MessageCircle, role: "STAFF" },
@@ -9346,14 +9612,14 @@ export default function App() {
                           }
                         }}
                         className={`flex items-center justify-between p-3.5 rounded-2xl transition-all group ${
-                          activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab)) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
+                          activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab || (activeTab === "facilities" && si.id.startsWith("facilities-")))) || (item.id === 'invoices' && activeTab.startsWith('invoice-'))
                             ? 'bg-white/5 text-white' 
                             : 'text-zinc-400 hover:bg-white/5 hover:text-white'
                         }`}
                       >
                          <div className="flex items-center gap-3">
                            <item.icon className={`w-4 h-4 transition-colors ${
-                              activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab)) || (item.id === 'invoices' && activeTab === 'invoices')
+                              activeTab === item.id || (item.subItems && item.subItems.some(si => si.id === activeTab || (activeTab === "facilities" && si.id.startsWith("facilities-")))) || (item.id === 'invoices' && activeTab === 'invoices')
                                 ? 'text-[#CCFF00]' 
                                 : 'text-zinc-600 group-hover:text-[#CCFF00]'
                            }`} />
@@ -9371,31 +9637,86 @@ export default function App() {
                               if (sub.role === "ADMIN" && user?.role === "ADMIN") return true;
                               if (sub.role === "ADMIN_OR_STAFF" && (user?.role === "ADMIN" || user?.role === "STAFF" || user?.role === "RECEPTIONIST")) return true;
                               return sub.role === user.role;
-                            }).map((sub: any) => (
-                              <button
-                                key={sub.id}
-                                onClick={() => {
-                                  if (sub.id === "facilities") {
-                                    setActiveTab("facilities");
-                                    setIsSidebarOpen(false);
-                                  } else if (sub.id === "maintenance") {
-                                    setActiveTab("maintenance");
-                                    setIsSidebarOpen(false);
-                                  } else if (sub.action) {
-                                    sub.action();
-                                    setIsSidebarOpen(false);
-                                  } else {
-                                    setActiveTab(sub.id as any);
-                                    setIsSidebarOpen(false);
-                                  }
-                                }}
-                                className={`w-full text-left p-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                  activeTab === sub.id ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-500 hover:text-white'
-                                } ${(sub as any).action ? 'text-[#CCFF00] border border-[#CCFF00]/10 mt-1 mb-2 bg-[#CCFF00]/5' : ''}`}
-                              >
-                                {sub.label}
-                              </button>
-                            ))}
+                            }).map((sub: any) => {
+                              if (sub.id === "facilities") {
+                                const isSubActive = activeTab === "facilities";
+                                const isTrainingActive = activeTab === "facilities" && facilitiesType === "TRAINING";
+                                const isInteriorActive = activeTab === "facilities" && facilitiesType === "INTERIOR";
+                                const isAllActive = activeTab === "facilities" && facilitiesType === "ALL";
+
+                                return (
+                                  <div key={sub.id} className="flex flex-col gap-1 w-full">
+                                    <button
+                                      onClick={() => {
+                                        setActiveTab("facilities");
+                                        setFacilitiesType("ALL");
+                                        setIsFacilitiesSubmenuOpen(!isFacilitiesSubmenuOpen);
+                                      }}
+                                      className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        isSubActive && facilitiesType === "ALL" ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-500 hover:text-white'
+                                      }`}
+                                    >
+                                      <span>{sub.label}</span>
+                                      <ChevronDown className={`w-3 h-3 transition-transform ${isFacilitiesSubmenuOpen ? "rotate-180 text-[#CCFF00]" : "text-zinc-600"}`} />
+                                    </button>
+                                    
+                                    {isFacilitiesSubmenuOpen && (
+                                      <div className="flex flex-col gap-1 pl-4">
+                                        <button
+                                          onClick={() => {
+                                            setActiveTab("facilities");
+                                            setFacilitiesType("TRAINING");
+                                            setIsSidebarOpen(false);
+                                          }}
+                                          className={`w-full text-left p-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            isTrainingActive ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-600 hover:text-white'
+                                          }`}
+                                        >
+                                          {lang === 'vi' ? '• Thiết bị tập luyện' : '• Workout Equipment'}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            setActiveTab("facilities");
+                                            setFacilitiesType("INTERIOR");
+                                            setIsSidebarOpen(false);
+                                          }}
+                                          className={`w-full text-left p-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            isInteriorActive ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-600 hover:text-white'
+                                          }`}
+                                        >
+                                          {lang === 'vi' ? '• Thiết bị nội thất' : '• Interior Equipment'}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              const isSubActive = activeTab === sub.id;
+
+                              return (
+                                <button
+                                  key={sub.id}
+                                  onClick={() => {
+                                    if (sub.id === "maintenance") {
+                                      setActiveTab("maintenance");
+                                      setIsSidebarOpen(false);
+                                    } else if (sub.action) {
+                                      sub.action();
+                                      setIsSidebarOpen(false);
+                                    } else {
+                                      setActiveTab(sub.id as any);
+                                      setIsSidebarOpen(false);
+                                    }
+                                  }}
+                                  className={`w-full text-left p-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    isSubActive ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-500 hover:text-white'
+                                  } ${(sub as any).action ? 'text-[#CCFF00] border border-[#CCFF00]/10 mt-1 mb-2 bg-[#CCFF00]/5' : ''}`}
+                                >
+                                  {sub.label}
+                                </button>
+                              );
+                            })}
                          </div>
                       )}
                     </div>
@@ -9533,6 +9854,10 @@ export default function App() {
                       ? t('staffReport')
                     : activeTab === "serviceReport"
                       ? t('serviceReport')
+                    : activeTab === "incidents"
+                      ? (lang === 'vi' ? 'Sự cố thiết bị' : 'Equipment Incidents')
+                    : activeTab === "facility-reports"
+                      ? (lang === 'vi' ? 'Báo cáo cơ sở' : 'Facility Reports')
                     : activeTab === "pos-products"
                       ? t('pos_products')
                     : activeTab === "pos-inventory"
@@ -9580,6 +9905,10 @@ export default function App() {
                       ? t('pkgManagement')
                     : activeTab === "pos"
                       ? t('pos_mgmt')
+                    : activeTab === "incidents"
+                      ? (lang === 'vi' ? 'Sự cố thiết bị' : 'Equipment Incidents')
+                    : activeTab === "facility-reports"
+                      ? (lang === 'vi' ? 'Báo cáo cơ sở' : 'Facility Reports')
                     : activeTab === "pos-products"
                       ? t('pos_products')
                     : activeTab === "pos-inventory"
@@ -9620,6 +9949,10 @@ export default function App() {
                       ? t('facilities')
                     : activeTab === "maintenance"
                       ? t('maintenance')
+                    : (activeTab as string) === "incidents"
+                      ? (lang === 'vi' ? 'Sự cố thiết bị' : 'Equipment Incidents')
+                    : (activeTab as string) === "facility-reports"
+                      ? (lang === 'vi' ? 'Báo cáo cơ sở' : 'Facility Reports')
                     : activeTab.startsWith('invoice-')
                       ? t('invoices')
                       : t('settings')}
@@ -12594,9 +12927,10 @@ export default function App() {
                             outerRadius={80}
                             paddingAngle={8}
                             dataKey="value"
+                            stroke="none"
                           >
                             {packageDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
+                              <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                             ))}
                           </Pie>
                           <Tooltip
@@ -14450,104 +14784,299 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6 h-full flex flex-col overflow-hidden px-5 md:px-5"
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-end gap-3 shrink-0">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
-                  <div className="relative group flex-1 md:w-64">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-hover:text-[#CCFF00] transition-colors" />
-                    <input
-                      type="text"
-                      value={equipmentSearch}
-                      onChange={(e) => setEquipmentSearch(e.target.value)}
-                      placeholder={t('searchEquipmentPlaceholder')}
-                      className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest focus:border-[#CCFF00] outline-none transition-all placeholder:text-zinc-800"
-                    />
-                  </div>
-                  
-                  <button 
-                    onClick={() => { setEditingEquipment(null); setIsEquipmentModalOpen(true); }}
-                    className="flex items-center justify-center gap-2 bg-[#CCFF00] text-black px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(204,255,0,0.15)] hover:scale-105 active:scale-95 transition-all outline-none border-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {t('addEquipmentCapitalized')}
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const isInteriorEquipment = (eq: any) => {
+                  const cat = (eq.category || "").toLowerCase();
+                  const name = (eq.name || "").toLowerCase();
+                  return (
+                    cat.includes("nội thất") || cat.includes("furniture") || cat.includes("interior") ||
+                    name.includes("điều hòa") || name.includes("máy lạnh") ||
+                    name.includes("camera") ||
+                    name.includes("locker") || name.includes("tủ đồ") || name.includes("tủ locker") ||
+                    name.includes("đèn") || name.includes("light")
+                  );
+                };
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto custom-scrollbar pb-10 flex-1 min-h-0">
-                  {equipments.filter(eq => 
-                    eq.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                    eq.code.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                    eq.category.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                    eq.location.toLowerCase().includes(equipmentSearch.toLowerCase())
-                  ).length === 0 ? (
-                    <div className="col-span-full py-20 text-center">
-                      <div className="flex flex-col items-center opacity-25">
-                        <Box className="w-12 h-12 mb-4" />
-                        <p className="text-[10px] font-mono uppercase tracking-widest">{t('noEquipmentFound')}</p>
+                const currentTypeEquipments = equipments.filter(eq => {
+                  if (facilitiesType === "TRAINING") return !isInteriorEquipment(eq);
+                  if (facilitiesType === "INTERIOR") return isInteriorEquipment(eq);
+                  return true;
+                });
+
+                return (
+                  <>
+                    <div className="flex flex-col gap-4 shrink-0">
+                      {/* Search and Add equipment row */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                        <div className="relative group flex-1 md:max-w-md">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-hover:text-[#CCFF00] transition-colors" />
+                          <input
+                            type="text"
+                            value={equipmentSearch}
+                            onChange={(e) => setEquipmentSearch(e.target.value)}
+                            placeholder={t('searchEquipmentPlaceholder')}
+                            className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest focus:border-[#CCFF00] outline-none transition-all placeholder:text-zinc-800"
+                          />
+                        </div>
+                        
+                        <button 
+                          onClick={() => { setEditingEquipment(null); setIsEquipmentModalOpen(true); }}
+                          className="flex items-center justify-center gap-2 bg-[#CCFF00] text-black px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(204,255,0,0.15)] hover:scale-105 active:scale-95 transition-all outline-none border-none whitespace-nowrap"
+                        >
+                          <Plus className="w-4 h-4" />
+                          {t('addEquipmentCapitalized')}
+                        </button>
+                      </div>
+
+
+
+                      {/* Location Filter tabs row */}
+                      <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar max-w-full">
+                        {(() => {
+                          const getParentAreaName = (location: string) => {
+                            const loc = location || "";
+                            const locLower = loc.toLowerCase();
+                            if (locLower.includes("khu vực a") || locLower.endsWith(" a") || locLower === "a") {
+                              return lang === 'vi' ? "Khu vực A" : "Area A";
+                            }
+                            if (locLower.includes("khu vực b") || locLower.endsWith(" b") || locLower === "b") {
+                              return lang === 'vi' ? "Khu vực B" : "Area B";
+                            }
+                            if (locLower.includes("khu vực c") || locLower.endsWith(" c") || locLower === "c") {
+                              return lang === 'vi' ? "Khu vực C" : "Area C";
+                            }
+                            return loc || (lang === 'vi' ? "Khu vực khác" : "Other Area");
+                          };
+
+                          const uniqueParentAreas = Array.from(new Set(currentTypeEquipments.map(eq => getParentAreaName(eq.location)).filter(Boolean)));
+                          return (
+                            <>
+                              <button 
+                                onClick={() => setSelectedEquipmentLocation("ALL")}
+                                className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${
+                                  selectedEquipmentLocation === "ALL" 
+                                    ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)]" 
+                                    : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
+                                  }`}
+                              >
+                                {lang === 'vi' ? 'TẤT CẢ KHU VỰC' : 'ALL AREAS'} ({currentTypeEquipments.length})
+                              </button>
+                              {uniqueParentAreas.map(parentArea => {
+                                const count = currentTypeEquipments.filter(eq => getParentAreaName(eq.location) === parentArea).length;
+                                return (
+                                  <button 
+                                    key={parentArea}
+                                    onClick={() => setSelectedEquipmentLocation(parentArea)}
+                                    className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${
+                                      selectedEquipmentLocation === parentArea 
+                                        ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)]" 
+                                        : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
+                                    }`}
+                                  >
+                                    {parentArea.toUpperCase()} ({count})
+                                  </button>
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
-                  ) : (
-                    equipments.filter(eq => 
-                      eq.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                      eq.code.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                      eq.category.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-                      eq.location.toLowerCase().includes(equipmentSearch.toLowerCase())
-                    ).map((eq) => {
-                      const statusColor = eq.status === 'NORMAL' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                          eq.status === 'MAINTENANCE_REQUIRED' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
-                                          eq.status === 'BROKEN' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                          'bg-[#CCFF00]/10 text-[#CCFF00] border-[#CCFF00]/20';
-                      const statusText = eq.status === 'NORMAL' ? t('normal') :
-                                         eq.status === 'MAINTENANCE_REQUIRED' ? t('needMaintenance') :
-                                         eq.status === 'BROKEN' ? t('broken') :
-                                         t('underMaintenance');
-                      return (
-                        <div key={eq.id} className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between hover:border-[#CCFF00]/20 transition-all group relative">
-                          <div className="flex justify-between items-start mb-4">
+
+                    <div className="overflow-y-auto custom-scrollbar pb-10 flex-1 min-h-0 space-y-8">
+                      {(() => {
+                        const getParentAreaName = (location: string) => {
+                          const loc = location || "";
+                          const locLower = loc.toLowerCase();
+                          if (locLower.includes("khu vực a") || locLower.endsWith(" a") || locLower === "a") {
+                            return lang === 'vi' ? "Khu vực A" : "Area A";
+                          }
+                          if (locLower.includes("khu vực b") || locLower.endsWith(" b") || locLower === "b") {
+                            return lang === 'vi' ? "Khu vực B" : "Area B";
+                          }
+                          if (locLower.includes("khu vực c") || locLower.endsWith(" c") || locLower === "c") {
+                            return lang === 'vi' ? "Khu vực C" : "Area C";
+                          }
+                          return loc || (lang === 'vi' ? "Khu vực khác" : "Other Area");
+                        };
+
+                        const filtered = currentTypeEquipments.filter(eq => {
+                          const matchesSearch = eq.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+                            eq.code.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+                            eq.category.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+                            eq.location.toLowerCase().includes(equipmentSearch.toLowerCase());
+                          const matchesLocation = selectedEquipmentLocation === "ALL" || getParentAreaName(eq.location) === selectedEquipmentLocation;
+                          return matchesSearch && matchesLocation;
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="py-20 text-center">
+                              <div className="flex flex-col items-center opacity-25">
+                                <Box className="w-12 h-12 mb-4" />
+                                <p className="text-[10px] font-mono uppercase tracking-widest">{t('noEquipmentFound')}</p>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        // Group filtered equipments by parent area
+                        const grouped: { [key: string]: typeof equipments } = {};
+                        filtered.forEach(eq => {
+                          const parentLoc = getParentAreaName(eq.location);
+                          if (!grouped[parentLoc]) {
+                            grouped[parentLoc] = [];
+                          }
+                          grouped[parentLoc].push(eq);
+                        });
+
+                  return Object.keys(grouped).map(loc => {
+                    const activeSubFilter = areaSubFilters[loc] || "ALL";
+                    const displayedEquipments = grouped[loc].filter(eq => {
+                      if (activeSubFilter === "ALL") return true;
+                      if (activeSubFilter === "CARDIO") {
+                        const cat = (eq.category || "").toLowerCase();
+                        const name = (eq.name || "").toLowerCase();
+                        const location = (eq.location || "").toLowerCase();
+                        return cat.includes("cardio") || name.includes("cardio") || location.includes("cardio");
+                      }
+                      if (activeSubFilter === "STRENGTH") {
+                        const cat = (eq.category || "").toLowerCase();
+                        const name = (eq.name || "").toLowerCase();
+                        const location = (eq.location || "").toLowerCase();
+                        return (
+                          cat.includes("sức mạnh") || cat.includes("tự do") || cat.includes("strength") || cat.includes("weight") ||
+                          name.includes("tạ") || name.includes("sức mạnh") || name.includes("weight") ||
+                          location.includes("tạ") || location.includes("sức mạnh")
+                        );
+                      }
+                      return true;
+                    });
+
+                    return (
+                      <div key={loc} className="flex flex-col gap-6 border-b border-white/5 pb-8 last:border-none">
+                        {/* Section Header */}
+                        <div className="w-full bg-zinc-950/40 border border-white/5 rounded-3xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-xl bg-[#CCFF00]/10 border border-[#CCFF00]/20">
+                              <MapPin className="w-4 h-4 text-[#CCFF00]" />
+                            </div>
                             <div>
-                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic">{eq.category} // {eq.code}</span>
-                              <h3 className="text-base font-black uppercase italic text-white group-hover:text-[#CCFF00] transition-colors mt-1">{eq.name}</h3>
-                            </div>
-                            <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border ${statusColor}`}>
-                              {statusText}
-                            </span>
-                          </div>
-                          
-                          <div className="space-y-2 mb-6 font-mono text-[10px] text-zinc-500">
-                            <div className="flex justify-between">
-                              <span className="uppercase">{t('location')}:</span>
-                              <span className="text-zinc-400 font-bold">{eq.location}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="uppercase">{t('lastMaintenance')}:</span>
-                              <span className="text-zinc-400 font-bold">{eq.lastMaintenance}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="uppercase">{t('nextMaintenance')}:</span>
-                              <span className="text-[#CCFF00] font-bold">{eq.nextMaintenance}</span>
+                              <h3 className="text-sm font-black uppercase tracking-wider italic text-white leading-tight">
+                                {loc}
+                              </h3>
+                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic block mt-0.5">
+                                {grouped[loc].length} {lang === 'vi' ? 'máy móc tổng cộng' : 'total equipments'}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="flex gap-2">
+                          {/* Sub filters inside this area */}
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => { setEditingEquipment(eq); setIsEquipmentModalOpen(true); }}
-                              className="flex-1 py-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-[#CCFF00] hover:bg-[#CCFF00]/10 hover:border-[#CCFF00]/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                              onClick={() => {
+                                setAreaSubFilters(prev => ({
+                                  ...prev,
+                                  [loc]: prev[loc] === "CARDIO" ? "ALL" : "CARDIO"
+                                }));
+                              }}
+                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                activeSubFilter === "CARDIO"
+                                  ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)] font-black"
+                                  : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
+                              }`}
                             >
-                              {t('editBtnLong')}
+                              {lang === 'vi' ? 'Khu vực Cardio' : 'Cardio area'}
                             </button>
                             <button
-                              onClick={() => handleDeleteEquipment(eq.id)}
-                              className="px-3 bg-white/5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                              onClick={() => {
+                                setAreaSubFilters(prev => ({
+                                  ...prev,
+                                  [loc]: prev[loc] === "STRENGTH" ? "ALL" : "STRENGTH"
+                                }));
+                              }}
+                              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                activeSubFilter === "STRENGTH"
+                                  ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)] font-black"
+                                  : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
+                              }`}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              {lang === 'vi' ? 'Khu vực tạ' : 'Weight area'}
                             </button>
                           </div>
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-            </motion.div>
+
+                        {/* Section Grid */}
+                        {displayedEquipments.length === 0 ? (
+                          <div className="py-12 bg-zinc-950/10 rounded-2xl border border-dashed border-white/5 text-center text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
+                            {lang === 'vi' ? 'Không tìm thấy thiết bị phù hợp trong bộ lọc này' : 'No matching equipment found in this filter'}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {displayedEquipments.map((eq) => {
+                              const statusColor = eq.status === 'NORMAL' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                  eq.status === 'MAINTENANCE_REQUIRED' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                                  eq.status === 'BROKEN' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                  'bg-[#CCFF00]/10 text-[#CCFF00] border-[#CCFF00]/20';
+                              const statusText = eq.status === 'NORMAL' ? t('normal') :
+                                                 eq.status === 'MAINTENANCE_REQUIRED' ? t('needMaintenance') :
+                                                 eq.status === 'BROKEN' ? t('broken') :
+                                                 t('underMaintenance');
+                              return (
+                                <div key={eq.id} className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between hover:border-[#CCFF00]/20 transition-all group relative">
+                                  <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic">{eq.category} // {eq.code}</span>
+                                      <h3 className="text-sm font-black uppercase italic text-white group-hover:text-[#CCFF00] transition-colors mt-1 line-clamp-1">{eq.name}</h3>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border shrink-0 ${statusColor}`}>
+                                      {statusText}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="space-y-2 mb-6 font-mono text-[10px] text-zinc-500">
+                                    <div className="flex justify-between">
+                                      <span className="uppercase">{t('location')}:</span>
+                                      <span className="text-zinc-400 font-bold">{eq.location}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="uppercase">{t('lastMaintenance')}:</span>
+                                      <span className="text-zinc-400 font-bold">{eq.lastMaintenance}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="uppercase">{t('nextMaintenance')}:</span>
+                                      <span className="text-[#CCFF00] font-bold">{eq.nextMaintenance}</span>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => { setEditingEquipment(eq); setIsEquipmentModalOpen(true); }}
+                                      className="flex-1 py-3 bg-white/5 border border-white/5 text-zinc-400 hover:text-[#CCFF00] hover:bg-[#CCFF00]/10 hover:border-[#CCFF00]/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+                                    >
+                                      {t('editBtnLong')}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteEquipment(eq.id)}
+                                      className="px-3 bg-white/5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </>
+          );
+        })()}
+      </motion.div>
           ) : activeTab === "maintenance" ? (
             <motion.div
               className="space-y-6 h-full flex flex-col overflow-hidden px-5 md:px-5"
@@ -14638,6 +15167,453 @@ export default function App() {
                       </tbody>
                    </table>
                  </div>
+              </div>
+            </motion.div>
+          ) : activeTab === "incidents" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6 h-full flex flex-col overflow-hidden px-5 md:px-5 font-sans"
+            >
+              {/* Stat cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0 font-sans">
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  <div className="text-[3rem] font-black text-white/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">TỔNG</div>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Tổng số sự cố</span>
+                  <div className="text-3xl font-black italic text-white mt-1">{incidents.length}</div>
+                </div>
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  <div className="text-[3rem] font-black text-red-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">MỚI</div>
+                  <span className="text-[10px] font-mono text-red-500 uppercase tracking-widest italic font-bold">Lỗi mới báo</span>
+                  <div className="text-3xl font-black italic text-red-500 mt-1">{incidents.filter(i => i.status === "NEW").length}</div>
+                </div>
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  <div className="text-[3rem] font-black text-orange-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">SỬA</div>
+                  <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest italic font-bold">Đang xử lý</span>
+                  <div className="text-3xl font-black italic text-orange-500 mt-1">{incidents.filter(i => i.status === "IN_PROGRESS").length}</div>
+                </div>
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
+                  <div className="text-[3rem] font-black text-emerald-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">XONG</div>
+                  <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest italic font-bold">Đã khắc phục</span>
+                  <div className="text-3xl font-black italic text-emerald-500 mt-1">{incidents.filter(i => i.status === "RESOLVED").length}</div>
+                </div>
+              </div>
+
+              {/* Control bars */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 font-sans">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                  <div className="relative group flex-1 md:w-64">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-hover:text-[#CCFF00] transition-colors" />
+                    <input
+                      type="text"
+                      value={incidentSearch}
+                      onChange={(e) => setIncidentSearch(e.target.value)}
+                      placeholder="Tìm sự cố, thiết bị..."
+                      className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest focus:border-[#CCFF00] outline-none transition-all placeholder:text-zinc-800 text-white"
+                    />
+                  </div>
+                  
+                  {/* Status Filter */}
+                  <select
+                    value={incidentStatusFilter}
+                    onChange={(e) => setIncidentStatusFilter(e.target.value)}
+                    className="bg-zinc-900 border border-white/10 text-zinc-450 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl outline-none"
+                  >
+                    <option value="ALL">TẤT CẢ TRẠNG THÁI</option>
+                    <option value="NEW">MỚI KHAI BÁO</option>
+                    <option value="IN_PROGRESS">ĐANG XỬ LÝ</option>
+                    <option value="RESOLVED">ĐÃ KHẮC PHỤC</option>
+                  </select>
+
+                  {/* Severity Filter */}
+                  <select
+                    value={incidentSeverityFilter}
+                    onChange={(e) => setIncidentSeverityFilter(e.target.value)}
+                    className="bg-zinc-900 border border-white/10 text-zinc-450 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl outline-none"
+                  >
+                    <option value="ALL">TẤT CẢ MỨC ĐỘ</option>
+                    <option value="LOW">THẤP</option>
+                    <option value="MEDIUM">TRUNG BÌNH</option>
+                    <option value="HIGH">NGHIÊM TRỌNG</option>
+                  </select>
+                </div>
+
+                <button 
+                  onClick={() => {
+                    setEditingIncident(null);
+                    setNewIncident({
+                      equipmentName: equipments[0]?.name || "",
+                      location: equipments[0]?.location || "",
+                      reporter: user?.fullName || "",
+                      description: "",
+                      severity: "MEDIUM",
+                      status: "NEW",
+                      resolutionNotes: ""
+                    });
+                    setIsIncidentModalOpen(true);
+                  }}
+                  className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.15)] hover:scale-105 active:scale-95 transition-all outline-none border-none cursor-pointer"
+                >
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                  Báo cáo sự cố mới
+                </button>
+              </div>
+
+              {/* Incidents Table / List */}
+              <div className="bg-zinc-950 border border-white/5 rounded-[2.5rem] overflow-hidden shadow-2xl flex-1 flex flex-col min-h-0 font-sans">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-zinc-950 z-10">
+                      <tr className="text-[10px] font-black font-mono text-zinc-500 uppercase tracking-[0.2em] border-b border-white/5 italic">
+                        <th className="px-8 py-6">Thiết bị / Vị trí</th>
+                        <th className="px-8 py-6">Mô tả sự cố</th>
+                        <th className="px-8 py-6">Người báo / Ngày</th>
+                        <th className="px-8 py-6">Mức độ</th>
+                        <th className="px-8 py-6">Trạng thái</th>
+                        <th className="px-8 py-6 text-center">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/[0.02]">
+                      {incidents.filter(inc => {
+                        const matchesSearch = inc.equipmentName.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                              inc.description.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                              inc.reporter.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                              inc.location.toLowerCase().includes(incidentSearch.toLowerCase());
+                        const matchesStatus = incidentStatusFilter === "ALL" || inc.status === incidentStatusFilter;
+                        const matchesSeverity = incidentSeverityFilter === "ALL" || inc.severity === incidentSeverityFilter;
+                        return matchesSearch && matchesStatus && matchesSeverity;
+                      }).length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-24 text-center">
+                            <div className="flex flex-col items-center opacity-20">
+                              <AlertCircle className="w-12 h-12 mb-4" />
+                              <p className="text-[10px] font-mono uppercase tracking-[0.5em]">Không có sự cố nào được tìm thấy</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        incidents.filter(inc => {
+                          const matchesSearch = inc.equipmentName.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                                inc.description.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                                inc.reporter.toLowerCase().includes(incidentSearch.toLowerCase()) ||
+                                                inc.location.toLowerCase().includes(incidentSearch.toLowerCase());
+                          const matchesStatus = incidentStatusFilter === "ALL" || inc.status === incidentStatusFilter;
+                          const matchesSeverity = incidentSeverityFilter === "ALL" || inc.severity === incidentSeverityFilter;
+                          return matchesSearch && matchesStatus && matchesSeverity;
+                        }).map((inc) => {
+                          const severityColor = inc.severity === 'HIGH' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                                inc.severity === 'MEDIUM' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                                'bg-blue-500/10 text-blue-500 border-blue-500/20';
+                          const statusColor = inc.status === 'NEW' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                                              inc.status === 'IN_PROGRESS' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                              'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+                          const statusText = inc.status === 'NEW' ? 'MỚI BÁO' :
+                                             inc.status === 'IN_PROGRESS' ? 'ĐANG SỬA' :
+                                             'ĐÃ XỬ LÝ';
+                          return (
+                            <tr key={inc.id} className="hover:bg-white/[0.01] transition-colors group">
+                              <td className="px-8 py-6">
+                                <div className="flex flex-col font-sans">
+                                  <span className="text-xs font-black uppercase italic text-white">{inc.equipmentName}</span>
+                                  <span className="text-[9px] font-mono text-zinc-500 mt-1 italic uppercase tracking-wider">{inc.location}</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6 max-w-sm">
+                                <p className="text-xs text-zinc-300 font-medium line-clamp-2">{inc.description}</p>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-zinc-300 font-medium">{inc.reporter}</span>
+                                  <span className="text-[10px] font-mono text-zinc-500 mt-1">{inc.reportedDate}</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-6">
+                                <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border ${severityColor}`}>
+                                  {inc.severity === "HIGH" ? 'CAO // KHẨN CẤP' : inc.severity === "MEDIUM" ? 'TRUNG BÌNH' : 'THẤP'}
+                                </span>
+                              </td>
+                              <td className="px-8 py-6">
+                                <div className="flex flex-col items-start gap-1.5 max-w-xs">
+                                  <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border ${statusColor}`}>
+                                    {statusText}
+                                  </span>
+                                  {inc.status === 'RESOLVED' && inc.resolutionNotes && (
+                                    <div className="bg-emerald-500/5 text-emerald-400 p-2.5 rounded-lg border border-emerald-500/10 text-[10px] font-mono">
+                                      <span className="font-extrabold uppercase text-emerald-500">KHẮC PHỤC: </span> {inc.resolutionNotes}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-8 py-6 text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  {inc.status === "NEW" && (
+                                    <button
+                                      onClick={() => {
+                                        setIncidents(prev => prev.map(i => i.id === inc.id ? { ...i, status: "IN_PROGRESS" } : i));
+                                        
+                                        // Auto update corresponding equipment state to Maintenance required if needed
+                                        const matchingEq = equipments.find(e => e.name.toLowerCase() === inc.equipmentName.toLowerCase());
+                                        if (matchingEq) {
+                                          setEquipments(prev => prev.map(e => e.id === matchingEq.id ? { ...e, status: "UNDER_MAINTENANCE" } : e));
+                                        }
+
+                                        addNotification("Đã bắt đầu xử lý sự cố & đưa thiết bị vào bảo trì.");
+                                      }}
+                                      className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border-none outline-none"
+                                      title="Bắt đầu xử lý sửa chữa"
+                                    >
+                                      BẮT ĐẦU SỬA
+                                    </button>
+                                  )}
+                                  
+                                  {inc.status !== "RESOLVED" && (
+                                    <button
+                                      disabled={inc.status === "NEW"}
+                                      onClick={() => {
+                                        setEditingIncident({ ...inc, status: "RESOLVED" });
+                                        setIsIncidentModalOpen(true);
+                                      }}
+                                      className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border-none outline-none ${
+                                        inc.status === "NEW"
+                                          ? "bg-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed"
+                                          : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
+                                      }`}
+                                      title={inc.status === "NEW" ? "Hãy nhấn 'BẮT ĐẦU SỬA' trước khi báo cáo xử lý xong" : "Đánh dấu đã khắc phục hoàn thành"}
+                                    >
+                                      XỬ LÝ XONG
+                                    </button>
+                                  )}
+
+                                  {inc.status === "RESOLVED" && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingIncident(inc);
+                                        setIsIncidentModalOpen(true);
+                                      }}
+                                      className="p-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer border-none outline-none"
+                                      title="Chỉnh sửa ghi chú khắc phục"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={() => handleDeleteIncident(inc.id)}
+                                    className="p-2 bg-white/5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer border-none outline-none"
+                                    title="Xóa biên bản sự cố"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          ) : activeTab === "facility-reports" ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6 h-full flex flex-col overflow-y-auto custom-scrollbar px-5 md:px-5 pb-12 font-sans"
+            >
+              {/* Report Dashboard Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Chỉ số hoạt động thiết bị</span>
+                    <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
+                      {Math.round(((equipments.filter(e => e.status === "NORMAL").length) / (equipments.length || 1)) * 100)}%
+                    </h3>
+                  </div>
+                  <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-4 overflow-hidden">
+                    <div 
+                      className="bg-[#CCFF00] h-full rounded-full transition-all duration-1000"
+                      style={{ width: `${((equipments.filter(e => e.status === "NORMAL").length) / (equipments.length || 1)) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Công việc bảo trì hoàn thành</span>
+                  <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
+                    {maintenanceTasks.filter(t => t.status === "COMPLETED").length} / {maintenanceTasks.length}
+                  </h3>
+                  <p className="text-[9px] font-mono text-zinc-650 mt-2">
+                    Tỷ lệ: {Math.round(((maintenanceTasks.filter(t => t.status === "COMPLETED").length) / (maintenanceTasks.length || 1)) * 100)}% tổng số việc đã xếp lịch
+                  </p>
+                </div>
+
+                <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Chưa khắc phục xong</span>
+                  <h3 className="text-3xl font-black italic uppercase text-red-500 tracking-tighter mt-1">
+                    {incidents.filter(i => i.status !== "RESOLVED").length} vụ
+                  </h3>
+                  <p className="text-[9px] font-mono text-[#CCFF00] mt-2">
+                    {incidents.filter(i => i.status === "RESOLVED").length} vụ sự cố đã xử lý an toàn dứt điểm
+                  </p>
+                </div>
+
+                <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Tần suất báo hỏng trung bình</span>
+                  <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
+                    0.4 vụ / tháng
+                  </h3>
+                  <p className="text-[9px] font-mono text-zinc-650 mt-2">
+                    Khu vực Cardio ghi nhận phát sinh hỏng hóc cao nhất
+                  </p>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 select-none shrink-0 border-none outline-none">
+                {/* Equipment Status Chart */}
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">Biểu đồ Trạng thái Cơ sở vật chất</h3>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Trực quan hóa tỷ lệ khả dụng thiết bị phòng GYM</p>
+                  </div>
+                  <div className="h-64 mt-6">
+                     <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: "BÌNH THƯỜNG", count: equipments.filter(e => e.status === "NORMAL").length },
+                          { name: "ĐANG SỬA", count: equipments.filter(e => e.status === "UNDER_MAINTENANCE").length },
+                          { name: "CẦN SỬA", count: equipments.filter(e => e.status === "MAINTENANCE_REQUIRED").length },
+                          { name: "HỎNG", count: equipments.filter(e => e.status === "BROKEN").length },
+                        ]}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
+                      >
+                        <XAxis dataKey="name" stroke="#52525b" fontSize={8} tickLine={false} />
+                        <YAxis stroke="#52525b" fontSize={9} tickLine={false} />
+                        <Tooltip 
+                          cursor={false}
+                          contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a", borderRadius: "1rem" }}
+                          itemStyle={{ fontSize: "11px", color: "#fff", fontWeight: "bold" }}
+                          labelStyle={{ fontSize: "10px", color: "#71717a" }}
+                        />
+                        <Bar dataKey="count" radius={[8, 8, 0, 0]} stroke="none">
+                          {[
+                            { fill: "#22c55e" },
+                            { fill: "#CCFF00" },
+                            { fill: "#f97316" },
+                            { fill: "#ef4444" }
+                          ].map((item, idx) => (
+                            <Cell key={`cell-${idx}`} fill={item.fill} stroke="none" />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Incidents Breakdown Chart */}
+                <div className="bg-zinc-950 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">Mức độ nghiêm trọng của Sự cố</h3>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Tỷ lệ các mức độ hỏng hóc đã ghi nhận</p>
+                  </div>
+                  <div className="h-64 mt-6 flex items-center justify-center font-sans">
+                    <div className="w-1/2 h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: "HIGH", value: incidents.filter(i => i.severity === "HIGH").length || 1 },
+                              { name: "MEDIUM", value: incidents.filter(i => i.severity === "MEDIUM").length || 1 },
+                              { name: "LOW", value: incidents.filter(i => i.severity === "LOW").length || 1 },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={50}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            <Cell fill="#ef4444" stroke="none" />
+                            <Cell fill="#f97316" stroke="none" />
+                            <Cell fill="#3b82f6" stroke="none" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Legend */}
+                    <div className="w-1/2 flex flex-col gap-3 font-mono text-[10px]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
+                        <div>
+                          <p className="text-zinc-400">HIGH ({incidents.filter(i => i.severity === "HIGH").length})</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Cần can thiệp khẩn cấp</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-orange-500 shrink-0" />
+                        <div>
+                          <p className="text-zinc-400">MEDIUM ({incidents.filter(i => i.severity === "MEDIUM").length})</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Cần lên lịch xử lý</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-blue-500 shrink-0" />
+                        <div>
+                          <p className="text-zinc-400">LOW ({incidents.filter(i => i.severity === "LOW").length})</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Lỗi thẩm mỹ nhỏ</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Special Attention List */}
+              <div className="bg-zinc-950 border border-white/5 rounded-[2.5rem] p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h4 className="text-base font-black uppercase text-white italic tracking-tight">Thiết bị cần lưu ý đặc biệt</h4>
+                    <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mt-1">Danh sách máy móc đang báo lỗi rách da cơ, hỏng hóc hoặc đang chờ bảo dưỡng</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      window.print();
+                    }}
+                    className="flex items-center gap-2 bg-white/5 border border-white/5 text-zinc-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border-none outline-none"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    In báo cáo PDF
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  {equipments.filter(e => e.status !== "NORMAL").length === 0 ? (
+                    <div className="text-center py-8 text-zinc-500 font-mono text-xs uppercase tracking-widest">
+                      🎉 Tuyệt vời! Tất cả thiết bị phòng tập đều trong trạng thái hoạt động tốt.
+                    </div>
+                  ) : (
+                    equipments.filter(e => e.status !== "NORMAL").map(e => (
+                      <div key={e.id} className="flex justify-between items-center p-4 bg-white/[0.02] border border-white/5 rounded-2xl font-sans">
+                        <div className="flex items-center gap-3">
+                          <AlertTriangle className={`w-5 h-5 ${e.status === 'BROKEN' ? 'text-red-500' : 'text-orange-500'}`} />
+                          <div>
+                            <p className="text-xs font-black uppercase text-white">{e.name}</p>
+                            <p className="text-[9px] font-mono text-zinc-500">{e.location}</p>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-md text-[8px] font-mono font-bold ${
+                          e.status === 'BROKEN' ? 'bg-red-500/10 text-red-500' :
+                          e.status === 'MAINTENANCE_REQUIRED' ? 'bg-orange-500/10 text-orange-500' :
+                          'bg-[#CCFF00]/10 text-[#CCFF00]'
+                        }`}>
+                          {e.status}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </motion.div>
           ) : activeTab === "aiAnalytics" ? (
@@ -14997,6 +15973,7 @@ export default function App() {
             <WarehouseManagement 
               subTab={activeTab.substring(4) as any} 
               lang={lang} 
+              userRole={user?.role}
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-20">
@@ -18971,6 +19948,163 @@ export default function App() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {isIncidentModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md font-sans">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative bg-zinc-950 border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl p-10 overflow-y-auto max-h-[90vh] custom-scrollbar"
+            >
+              <div className="mb-8 flex justify-between items-start">
+                <div>
+                  <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[#CCFF00]">
+                    {editingIncident ? "Xử lý sự cố" : "Khai báo sự cố mới"}
+                  </h3>
+                  <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mt-1 italic leading-none">
+                    {editingIncident ? "PROCESS_EQUIPMENT_FAULT" : "REPORT_FACILITY_INCIDENT"}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsIncidentModalOpen(false)}
+                  className="p-2 text-zinc-500 hover:text-white transition-colors cursor-pointer border-none outline-none bg-transparent"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleIncidentSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  {editingIncident ? (
+                    <>
+                      {/* Read-only details */}
+                      <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2">
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Thiết bị: <span className="text-white font-bold">{editingIncident.equipmentName}</span></div>
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Vị trí: <span className="text-white font-bold">{editingIncident.location}</span></div>
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Mô tả hỏng: <span className="text-white font-medium">{editingIncident.description}</span></div>
+                      </div>
+
+                      {/* Status select for editing */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Trạng thái sự cố</label>
+                        <select 
+                          value={editingIncident.status}
+                          onChange={(e) => {
+                            const newStatus = e.target.value as any;
+                            setEditingIncident({ ...editingIncident, status: newStatus });
+                          }}
+                          className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic appearance-none"
+                        >
+                          <option value="NEW">MỚI KHAI BÁO</option>
+                          <option value="IN_PROGRESS">ĐANG BẢO TRÌ SỬA</option>
+                          <option value="RESOLVED">ĐÃ XỬ LÝ</option>
+                        </select>
+                      </div>
+
+                      {/* Resolution notes */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Biện pháp khắc phục / Nhật ký sửa chữa</label>
+                        <textarea 
+                          required
+                          value={editingIncident.resolutionNotes || ""}
+                          onChange={(e) => setEditingIncident({ ...editingIncident, resolutionNotes: e.target.value })}
+                          placeholder="Mô tả các bước kỹ thuật đã làm, linh kiện đã thay tế..."
+                          className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs text-white placeholder:text-zinc-700 min-h-[90px]"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Name of Equipment or Location */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Tên thiết bị bị sự cố / Hỏng hóc</label>
+                        <select 
+                          value={newIncident.equipmentName}
+                          onChange={(e) => {
+                            const selectedEq = equipments.find(item => item.name === e.target.value);
+                            setNewIncident({ 
+                              ...newIncident, 
+                              equipmentName: e.target.value,
+                              location: selectedEq ? selectedEq.location : ""
+                            });
+                          }}
+                          className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic"
+                        >
+                          {equipments.map(e => (
+                            <option key={e.id} value={e.name}>{e.name} (mã: {e.code})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Location of Incident */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Khu vực / Vị trí phòng GYM</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={newIncident.location || ""}
+                          onChange={(e) => setNewIncident({...newIncident, location: e.target.value})}
+                          placeholder="Khu tập tạ A, Tầng gác lửng..."
+                          className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-bold text-white uppercase italic"
+                        />
+                      </div>
+
+                      {/* Reporter Name */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Người phát hiện / Báo cáo sự cố</label>
+                        <input 
+                          required
+                          type="text" 
+                          value={newIncident.reporter || ""}
+                          onChange={(e) => setNewIncident({...newIncident, reporter: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-bold text-white uppercase italic"
+                        />
+                      </div>
+
+                      {/* Description */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Mô tả biểu hiện lỗi / Hỏng hóc chi tiết</label>
+                        <textarea 
+                          required
+                          value={newIncident.description || ""}
+                          onChange={(e) => setNewIncident({...newIncident, description: e.target.value})}
+                          placeholder="Máy chạy phát tiếng sột soạt ở trục băng tải, dây cáp bị đứt sợi tơ thép..."
+                          className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs text-white placeholder:text-zinc-700 min-h-[90px]"
+                        />
+                      </div>
+
+                      {/* Severity */}
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Mức độ nghiêm trọng</label>
+                        <select 
+                          value={newIncident.severity}
+                          onChange={(e) => setNewIncident({...newIncident, severity: e.target.value as any})}
+                          className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic"
+                        >
+                          <option value="LOW">THẤP (LỖI THẨM MỸ, TIẾNG KÊU NHẸ)</option>
+                          <option value="MEDIUM">TRUNG BÌNH (MÁY YẾU, KHÔNG TRƠN TRU)</option>
+                          <option value="HIGH">NGHIÊM TRỌNG // KHẨN CẤP (HỎNG HẲN, ĐỨT DÂY)</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    className="w-full py-4 bg-[#CCFF00] text-black font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-[#CCFF00]/20 transition-all active:scale-95 text-xs cursor-pointer border-none outline-none"
+                  >
+                    {editingIncident ? "LƯU BIÊN BẢN KHẮC PHỤC" : "GỬI BÁO CÁO SỰ CỐ"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {isEquipmentModalOpen && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
             <motion.div
@@ -19029,6 +20163,7 @@ export default function App() {
                           <option value="Sức mạnh">{lang === 'vi' ? 'Sức mạnh' : (lang === 'zh' ? '力量训练' : 'Strength')}</option>
                           <option value="Tự do">{lang === 'vi' ? 'Tự do' : (lang === 'zh' ? '自由力量' : 'Free Weights')}</option>
                           <option value="Phụ kiện">{lang === 'vi' ? 'Phụ kiện' : (lang === 'zh' ? '配件' : 'Accessories')}</option>
+                          <option value="Nội thất">{lang === 'vi' ? 'Nội thất / Thiết bị phụ trợ' : 'Interior / Furniture'}</option>
                         </select>
                       </div>
                    </div>

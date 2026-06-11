@@ -701,10 +701,30 @@ const translateHistoryNote = (note: string, targetLang: string) => {
 interface WarehouseManagementProps {
   subTab: "products" | "inventory" | "purchase" | "receive" | "history" | "adjust" | "report";
   lang?: string;
+  userRole?: string;
 }
 
-export default function WarehouseManagement({ subTab, lang = "vi" }: WarehouseManagementProps) {
+export default function WarehouseManagement({ subTab, lang = "vi", userRole }: WarehouseManagementProps) {
   const t = (key: string) => whTranslations[lang]?.[key] || whTranslations["vi"]?.[key] || key;
+
+  // Access check for adjust and report features - restricting to ADMIN only
+  if ((subTab === "adjust" || subTab === "report") && userRole !== "ADMIN") {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-zinc-900/50 border border-white/5 rounded-3xl min-h-[300px]">
+        <AlertTriangle className="w-16 h-16 text-yellow-500 mb-4 animate-bounce" />
+        <h3 className="text-xl font-bold uppercase tracking-widest text-white">
+          {lang === 'vi' ? 'KHÔNG CÓ QUYỀN TRUY CẬP' : (lang === 'zh' ? '无权访问' : 'ACCESS DENIED')}
+        </h3>
+        <p className="text-sm text-zinc-500 mt-2 max-w-md font-sans">
+          {lang === 'vi' 
+            ? 'Chức năng điều chỉnh hàng tồn kho và báo cáo thống kê kho hiện tại chỉ dành riêng cho Quản trị viên (ADMIN).' 
+            : (lang === 'zh' 
+              ? '当前库存调整和库存报表功能仅限管理员 (ADMIN) 使用。' 
+              : 'Warehouse adjustment and reports are restricted to Administrative roles.')}
+        </p>
+      </div>
+    );
+  }
 
   // State lists
   const [products, setProducts] = useState<Product[]>([]);

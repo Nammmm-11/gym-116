@@ -24,3 +24,24 @@ body {
   scrollbar-width: none !important; /* Firefox */
 }
 
+/* Remove focus / active outline or border around Recharts paths & shapes */
+path:focus,
+path:focus-visible,
+rect:focus,
+rect:focus-visible,
+circle:focus,
+circle:focus-visible,
+g:focus,
+g:focus-visible,
+svg:focus,
+svg:focus-visible,
+.recharts-sector:focus,
+.recharts-pie-sector:focus,
+.recharts-bar-rectangle:focus,
+.recharts-rectangle:focus,
+.recharts-active-dot:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
