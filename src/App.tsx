@@ -47,6 +47,7 @@ import {
   Loader2,
   Zap,
   ChevronDown,
+  Globe,
   Eye,
   EyeOff,
   RefreshCw,
@@ -1830,6 +1831,82 @@ const translateReviewText = (text: string, toLang: string): string => {
   return result;
 };
 
+const GlobalLanguageSwitcher = ({ lang, setLang, className }: { lang: string; setLang: (l: string) => void; className?: string }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const languages = [
+    { code: "vi", label: "VI", name: "Tiếng Việt" },
+    { code: "en", label: "EN", name: "English" },
+    { code: "zh", label: "ZH", name: "中文" },
+  ];
+
+  const currentLang = languages.find((l) => l.code === lang) || languages[0];
+
+  return (
+    <div
+      ref={containerRef}
+      className={className || "fixed top-14 right-4 md:top-12 md:right-14 z-[100] font-sans"}
+    >
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 hover:bg-zinc-800 hover:border-white/20 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.6)] cursor-pointer select-none"
+      >
+        <Globe className="w-4 h-4 text-[#CCFF00]" />
+        <span className="text-xs font-black text-white uppercase tracking-wider">{currentLang.label}</span>
+        <ChevronDown 
+          className="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200" 
+          style={{ transform: isOpen ? 'rotate(180deg)' : 'none' }} 
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute right-0 top-full mt-2 w-36 bg-zinc-950 border border-white/10 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.85)] overflow-hidden z-[210] backdrop-blur-xl"
+          >
+            <div className="p-1.5 space-y-0.5">
+              {languages.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => {
+                    setLang(l.code);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between ${
+                    lang === l.code
+                      ? "bg-[#CCFF00] text-black font-extrabold"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  <span>{l.name}</span>
+                  {lang === l.code && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -2157,6 +2234,92 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("gym_lang", lang);
   }, [lang]);
+
+  const [isGlobalLangOpen, setIsGlobalLangOpen] = useState(false);
+
+  const getLocalizedCategory = (cat: string) => {
+    if (!cat) return "";
+    const c = cat.trim().toLowerCase();
+    if (c === "cardio") {
+      return lang === 'vi' ? "Cardio" : (lang === 'zh' ? "有氧设备" : "Cardio");
+    }
+    if (c === "sức mạnh" || c === "strength") {
+      return lang === 'vi' ? "Sức mạnh" : (lang === 'zh' ? "力量训练" : "Strength");
+    }
+    if (c === "tự do" || c === "free weights" || c === "free weight" || c === "tự do ") {
+      return lang === 'vi' ? "Tự do" : (lang === 'zh' ? "自由力量" : "Free Weights");
+    }
+    if (c === "nội thất" || c === "interior" || c === "furniture") {
+      return lang === 'vi' ? "Thiết bị nội thất" : (lang === 'zh' ? "环境与家具" : "Interior & Furniture");
+    }
+    if (c === "phụ kiện" || c === "phu kien" || c === "accessories" || c === "accessory") {
+      return lang === 'vi' ? "Phụ kiện" : (lang === 'zh' ? "配件" : "Accessories");
+    }
+    return cat;
+  };
+
+  const getLocalizedEquipmentName = (name: string) => {
+    if (!name) return "";
+    const n = name.trim();
+    if (n === "Máy chạy bộ Matrix T50") {
+      return lang === 'vi' ? "Máy chạy bộ Matrix T50" : (lang === 'zh' ? "Matrix T50 跑步机" : "Matrix T50 Treadmill");
+    }
+    if (n === "Giàn tạ đa năng Impulse") {
+      return lang === 'vi' ? "Giàn tạ đa năng Impulse" : (lang === 'zh' ? "Impulse 综合训练架" : "Impulse Multi-Gym Station");
+    }
+    if (n === "Xe đạp tập thể dục Spin Bike") {
+      return lang === 'vi' ? "Xe đạp tập thể dục Spin Bike" : (lang === 'zh' ? "Spin Bike 动感单车" : "Spin Bike Exercise Cycle");
+    }
+    if (n === "Bộ tạ tay cao su Jordan 5kg - 30kg") {
+      return lang === 'vi' ? "Bộ tạ tay cao su Jordan 5kg - 30kg" : (lang === 'zh' ? "Jordan 橡胶哑铃组 5kg - 30kg" : "Jordan Rubber Dumbbell Set 5kg - 30kg");
+    }
+    if (n === "Tạ đòn Olympic Impulse 2.2m") {
+      return lang === 'vi' ? "Tạ đòn Olympic Impulse 2.2m" : (lang === 'zh' ? "Impulse 奥林匹克杠铃杆 2.2米" : "Impulse Olympic Barbell 2.2m");
+    }
+    if (n === "Điều hòa Daikin Inverter 2.5 HP") {
+      return lang === 'vi' ? "Điều hòa Daikin Inverter 2.5 HP" : (lang === 'zh' ? "大金变频空调 2.5匹" : "Daikin Inverter Air Conditioner 2.5 HP");
+    }
+    if (n === "Camera giám sát Hikvision IP 4MP") {
+      return lang === 'vi' ? "Camera giám sát Hikvision IP 4MP" : (lang === 'zh' ? "海康威视 400万像素红外摄像机" : "Hikvision IP Surveillance Camera 4MP");
+    }
+    if (n === "Đèn LED sấy hồng ngoại") {
+      return lang === 'vi' ? "Đèn LED sấy hồng ngoại" : (lang === 'zh' ? "红外线理疗理疗灯" : "Infrared Heated LED Lamp");
+    }
+    if (n === "Tủ locker sắt khóa từ 18 ngăn") {
+      return lang === 'vi' ? "Tủ locker sắt khóa từ 18 ngăn" : (lang === 'zh' ? "18门磁卡锁铁皮储物柜" : "18-Compartment Electronic Lock Locker");
+    }
+    return name;
+  };
+
+  const getLocalizedLocation = (loc: string) => {
+    if (!loc) return "";
+    const l = loc.trim().toLowerCase();
+    if (l === "khu vực cardio a" || l === "cardio area a") {
+      return lang === 'vi' ? "Khu vực Cardio A" : (lang === 'zh' ? "有氧 A 区" : "Cardio Area A");
+    }
+    if (l === "khu vực cardio b" || l === "cardio area b") {
+      return lang === 'vi' ? "Khu vực Cardio B" : (lang === 'zh' ? "有氧 B 区" : "Cardio Area B");
+    }
+    if (l === "khu vực tạ a" || l === "weight area a") {
+      return lang === 'vi' ? "Khu vực tạ A" : (lang === 'zh' ? "力量 A 区" : "Weight Area A");
+    }
+    if (l === "khu vực tạ b" || l === "weight area b") {
+      return lang === 'vi' ? "Khu vực tạ B" : (lang === 'zh' ? "力量 B 区" : "Weight Area B");
+    }
+    if (l === "khu vực lễ tân" || l === "reception") {
+      return lang === 'vi' ? "Khu vực lễ tân" : (lang === 'zh' ? "前台接待区" : "Reception Area");
+    }
+    if (l.includes("khu vực a") || l.endsWith(" a") || l === "a") {
+      return lang === 'vi' ? "Khu vực A" : (lang === 'zh' ? "A 区" : "Area A");
+    }
+    if (l.includes("khu vực b") || l.endsWith(" b") || l === "b") {
+      return lang === 'vi' ? "Khu vực B" : (lang === 'zh' ? "B 区" : "Area B");
+    }
+    if (l.includes("khu vực c") || l.endsWith(" c") || l === "c") {
+      return lang === 'vi' ? "Khu vực C" : (lang === 'zh' ? "C 区" : "Area C");
+    }
+    return loc;
+  };
 
   const [bgIndex, setBgIndex] = useState(0);
 
@@ -2745,6 +2908,145 @@ export default function App() {
     }
 
     return note;
+  };
+
+  const translateValue = (val: string) => {
+    if (!val) return "";
+    if (lang === "vi") return val;
+    const trimmed = val.trim();
+    const upper = trimmed.toUpperCase();
+
+    const matches: Record<string, Record<string, string>> = {
+      // Equipment Names
+      "MÁY CHẠY BỘ MATRIX T50": {
+        en: "Matrix T50 Treadmill",
+        zh: "Matrix T50 跑步机"
+      },
+      "GIÀN TẠ ĐA NĂNG IMPULSE": {
+        en: "Impulse Multi-Gym Station",
+        zh: "Impulse 多功能综合训练器"
+      },
+      "XE ĐẠP TẬP THỂ DỤC SPIN BIKE": {
+        en: "Spin Bike Exercise Cycle",
+        zh: "动感单车 Spin Bike"
+      },
+      "BỘ TẠ TAY CAO SU JORDAN 5KG - 30KG": {
+        en: "Jordan Rubber Dumbbell Set 5kg - 30kg",
+        zh: "Jordan 橡胶哑铃组 5kg - 30kg"
+      },
+      "TẠ ĐÒN OLYMPIC IMPULSE 2.2M": {
+        en: "Olympic Impulse Barbell 2.2m",
+        zh: "Olympic Impulse 奥林匹克杠铃杆 2.2m"
+      },
+      "ĐIỀU HÒA DAIKIN INVERTER 2.5 HP": {
+        en: "Daikin Inverter AC 2.5 HP",
+        zh: "大金 Daikin 变频空调 2.5 HP"
+      },
+      "CAMERA GIÁM SÁT HIKVISION IP 4MP": {
+        en: "Hikvision IP Surveillance Camera 4MP",
+        zh: "海康威视 400万像素红外摄像机"
+      },
+      "ĐÈN LED SẤY HỒNG NGOẠI": {
+        en: "Infrared Heated LED Lamp",
+        zh: "红外线理疗电热灯"
+      },
+      "TỦ LOCKER SẮT KHÓA TỪ 18 NGĂN": {
+        en: "18-Compartment Electronic Lock Locker",
+        zh: "18门磁卡锁铁皮储物柜"
+      },
+      
+      // Locations
+      "KHU VỰC CARDIO A": {
+        en: "Cardio Zone A",
+        zh: "有氧训练 A 区"
+      },
+      "KHU VỰC CARDIO B": {
+        en: "Cardio Zone B",
+        zh: "有氧训练 B 区"
+      },
+      "KHU TẠ TỰ DO A": {
+        en: "Free Weight Zone A",
+        zh: "自由力量 A 区"
+      },
+      "KHU VỰC TẠ A": {
+        en: "Weight Zone A",
+        zh: "力量训练 A 区"
+      },
+      "KHU VỰC TẠ B": {
+        en: "Weight Zone B",
+        zh: "力量训练 B 区"
+      },
+      "KHU VỰC LỄ TÂN": {
+        en: "Reception Area",
+        zh: "前台接待区"
+      },
+      
+      // Reporters
+      "NGUYỄN VĂN CHUYỂN (KỸ THUẬT)": {
+        en: "Nguyen Van Chuyen (Technical)",
+        zh: "阮文转（技术员）"
+      },
+      "NGUYỄN VĂN CHUYỂN": {
+        en: "Nguyen Van Chuyen",
+        zh: "阮文转"
+      },
+      "TRẦN VĂN B (KỸ THUẬT)": {
+        en: "Tran Van B (Technical)",
+        zh: "陈文B（技术员）"
+      },
+      "HOÀNG NAM PT": {
+        en: "Hoang Nam PT",
+        zh: "黄南 PT"
+      },
+      "TRỰC CA HỖ TRỢ": {
+        en: "Support Staff",
+        zh: "值班客服"
+      },
+      
+      // Descriptions
+      "BÀN ĐẠP BÊN TRÁI BỊ KẸT CỨNG KHÔNG QUAY ĐƯỢC": {
+        en: "Left pedal is stuck and cannot rotate",
+        zh: "左侧踏板卡死无法转动"
+      },
+      "MÀN HÌNH CẢM ỨNG BỊ CHẬP CHỜN PHÍM ĐỔI ĐỘ DỐC, THỈNH THOẢNG MẤT CẢM ỨNG Ở GÓC TRÁI DƯỚI.": {
+        en: "Touchscreen slope button is flickering, occasionally losing touch at the bottom-left corner.",
+        zh: "触摸屏坡度调节键失灵，左下角偶尔失去触控响应"
+      },
+      "DÂY CÁP NÂNG TẠ BỊ XƠ NHẸ CẦN THAY DÂY CÁP VÀ KIỂM TRA BÁNH RÒNG RỌC KÉO TẠ.": {
+        en: "Weight cable is slightly frayed, needs replacement and inspection of the pulley wheels.",
+        zh: "配重拉索轻微起毛，需要更换钢丝绳并检查滑轮升降系统"
+      },
+      
+      // Resolution Notes
+      "ĐÃ BÔI DẦU TRƠN VÀ THAY Ổ BI MỚI VÀO NGÀY 12/05/2026.": {
+        en: "Lubricating oil applied and new ball bearings installed on May 12, 2026.",
+        zh: "已于2026年5月12日注油润滑并更换全新轴承。"
+      }
+    };
+
+    if (matches[upper]) {
+      return matches[upper][lang] || trimmed;
+    }
+
+    let localized = trimmed;
+    if (lang === "en") {
+      localized = localized
+        .replace(/Khu vực/gi, "Zone")
+        .replace(/mã:/gi, "code:")
+        .replace(/mã\s*/gi, "code ")
+        .replace(/đơn giá/gi, "unit price")
+        .replace(/Ngày/gi, "Date")
+        .replace(/ngày\s*/gi, "date ");
+    } else if (lang === "zh") {
+      localized = localized
+        .replace(/Khu vực/gi, "区域")
+        .replace(/mã:/gi, "编码:")
+        .replace(/mã\s*/gi, "编码")
+        .replace(/đơn giá/gi, "单价")
+        .replace(/Ngày/gi, "日期")
+        .replace(/ngày\s*/gi, "日期");
+    }
+    return localized;
   };
 
   const getStaffDisplayName = (s: { username: string; fullName: string; role?: string }) => {
@@ -4794,7 +5096,7 @@ export default function App() {
   const handleDeleteMaintenance = (id: number) => {
     confirmAction(
       t('confirmAction'),
-      "Xác nhận xóa lịch bảo trì này?",
+      lang === 'vi' ? "Xác nhận xóa lịch bảo trì này?" : (lang === 'zh' ? "确认删除此维护日程安排？" : "Confirm deletion of this maintenance schedule?"),
       () => {
         setMaintenanceTasks(prev => prev.filter(task => task.id !== id));
         addNotification(t('success'));
@@ -4815,7 +5117,7 @@ export default function App() {
         }
       }
       
-      addNotification("Cập nhật sự cố thành công!");
+      addNotification(lang === 'vi' ? "Cập nhật sự cố thành công!" : (lang === 'zh' ? "故障记录已成功更新！" : "Incident report successfully updated!"));
     } else {
       const inc = { 
         ...newIncident, 
@@ -4823,7 +5125,7 @@ export default function App() {
         reportedDate: new Date().toISOString().split('T')[0]
       } as FacilityIncident;
       setIncidents(prev => [inc, ...prev]);
-      addNotification("Báo cáo sự cố thành công!");
+      addNotification(lang === 'vi' ? "Báo cáo sự cố thành công!" : (lang === 'zh' ? "已成功提交新故障报告！" : "Incident report successfully submitted!"));
       setNewIncident({
         equipmentName: "",
         location: "",
@@ -4840,10 +5142,10 @@ export default function App() {
   const handleDeleteIncident = (id: number) => {
     confirmAction(
       t('confirmAction'),
-      "Xác nhận xóa biên bản sự cố này?",
+      lang === 'vi' ? "Xác nhận xóa biên bản sự cố này?" : (lang === 'zh' ? "确认删除此条故障记录？" : "Confirm deletion of this incident record?"),
       () => {
         setIncidents(prev => prev.filter(inc => inc.id !== id));
-        addNotification("Xóa sự cố thành công!");
+        addNotification(lang === 'vi' ? "Xóa sự cố thành công!" : (lang === 'zh' ? "故障记录已成功删除！" : "Incident record successfully deleted!"));
       }
     );
   };
@@ -8076,7 +8378,6 @@ export default function App() {
             </div>
           )}
         </AnimatePresence>
-
       </div>
     );
   }
@@ -8725,6 +9026,7 @@ export default function App() {
               </motion.div>
             </div>
           </div>
+          <GlobalLanguageSwitcher lang={lang} setLang={setLang} />
         </div>
       );
     }
@@ -8830,44 +9132,28 @@ export default function App() {
               <div className="absolute top-1/4 -right-16 w-80 h-80 bg-[#CCFF00]/5 rounded-full blur-[110px] pointer-events-none z-0" />
               <div className="absolute bottom-1/4 -left-16 w-80 h-80 bg-blue-500/5 rounded-full blur-[110px] pointer-events-none z-0" />
 
-              {/* Header inside screen */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-6 z-10 relative">
+               {/* Header inside screen */}
+              <div className="flex flex-row justify-between items-center gap-4 border-b border-white/5 pb-6 z-10 relative">
                 <div>
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter text-white leading-none">
+                  <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black italic uppercase tracking-tighter text-white leading-none">
                     FITMASTER<span className="text-[#CCFF00]"> GYM</span>
                   </h1>
-                  <p className="text-[11px] md:text-xs font-bold font-mono text-zinc-400 tracking-[0.22em] uppercase mt-2.5 max-w-md">
+                  <p className="text-[9px] sm:text-[11px] md:text-xs font-bold font-mono text-zinc-400 tracking-[0.22em] uppercase mt-1 md:mt-2.5 max-w-md">
                     {isForgotMode ? t('resetPassword') : (t('authSystem') + " // v0.4.2")}
                   </p>
                 </div>
 
                 {/* Better Scaled Language Toggler & Platform Switcher */}
-                <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                   <select
                     value={authViewMode}
                     onChange={(e) => setAuthViewMode(e.target.value as "web" | "mobile")}
-                    className="bg-white/5 text-[#CCFF00] text-[9px] md:text-xs font-bold uppercase py-1.5 px-3 rounded-xl border border-white/10 outline-none cursor-pointer tracking-wider hover:border-[#CCFF00]/40 transition-all shadow-inner"
+                    className="bg-[#09090A] text-[#CCFF00] text-[9px] sm:text-xs font-bold uppercase py-1.5 px-2.5 sm:px-3 rounded-xl border border-white/10 outline-none cursor-pointer tracking-wider hover:border-[#CCFF00]/40 transition-all shadow-inner"
                   >
                     <option value="web" className="bg-zinc-950 text-white">🖥️ WEB PORTAL</option>
                     <option value="mobile" className="bg-zinc-950 text-white">📱 MOBILE SIM</option>
                   </select>
-
-                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
-                    {[
-                      { id: 'vi', label: 'VI' },
-                      { id: 'en', label: 'EN' },
-                      { id: 'zh', label: 'ZH' }
-                    ].map(l => (
-                      <button
-                        key={l.id}
-                        onClick={() => setLang(l.id)}
-                        type="button"
-                        className={`px-2 py-1 rounded-lg text-[8px] md:text-xs font-black transition-all cursor-pointer ${lang === l.id ? 'bg-[#CCFF00] text-black font-extrabold' : 'text-zinc-500 hover:text-white'}`}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </div>
+                  <GlobalLanguageSwitcher lang={lang} setLang={setLang} className="relative z-[100] font-sans" />
                 </div>
               </div>
 
@@ -9227,7 +9513,6 @@ export default function App() {
                   ]
                 },
                 { id: "communication", label: t('communication'), icon: MessageCircle, role: "STAFF" },
-                { id: "settings", label: t('settings'), icon: Settings, role: "STAFF" },
               ].filter((item) => {
                 if (!user) return false;
                 if (user.role === "ADMIN") return item.role !== "MEMBER";
@@ -9379,7 +9664,7 @@ export default function App() {
                                       }`}
                                     >
                                       <div className={`w-1 h-1 rounded-full ${isTrainingActive ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
-                                      {lang === 'vi' ? 'Thiết bị tập luyện' : 'Workout Equipment'}
+                                      {lang === 'vi' ? 'Thiết bị tập luyện' : (lang === 'zh' ? '健身训练设备' : 'Workout Equipment')}
                                     </button>
                                     <button
                                       onClick={() => {
@@ -9391,7 +9676,7 @@ export default function App() {
                                       }`}
                                     >
                                       <div className={`w-1 h-1 rounded-full ${isInteriorActive ? 'bg-[#CCFF00]' : 'bg-zinc-800'}`} />
-                                      {lang === 'vi' ? 'Thiết bị nội thất' : 'Interior Equipment'}
+                                      {lang === 'vi' ? 'Thiết bị nội thất' : (lang === 'zh' ? '家具与辅助设备' : 'Interior Equipment')}
                                     </button>
                                   </div>
                                 )}
@@ -9672,7 +9957,7 @@ export default function App() {
                                             isTrainingActive ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-600 hover:text-white'
                                           }`}
                                         >
-                                          {lang === 'vi' ? '• Thiết bị tập luyện' : '• Workout Equipment'}
+                                          {lang === 'vi' ? '• Thiết bị tập luyện' : (lang === 'zh' ? '• 健身训练设备' : '• Workout Equipment')}
                                         </button>
                                         <button
                                           onClick={() => {
@@ -9684,7 +9969,7 @@ export default function App() {
                                             isInteriorActive ? 'text-[#CCFF00] bg-[#CCFF00]/10' : 'text-zinc-600 hover:text-white'
                                           }`}
                                         >
-                                          {lang === 'vi' ? '• Thiết bị nội thất' : '• Interior Equipment'}
+                                          {lang === 'vi' ? '• Thiết bị nội thất' : (lang === 'zh' ? '• 家具与辅助设备' : '• Interior Equipment')}
                                         </button>
                                       </div>
                                     )}
@@ -9726,57 +10011,6 @@ export default function App() {
                <nav className="flex flex-col gap-1.5 pt-4 border-t border-white/5">
                  <p className="text-[8px] font-mono text-zinc-600 uppercase tracking-[0.2em] mb-2 px-2 italic">{t('systemAccount')}</p>
                  
-                 <div className="flex flex-col">
-                   <button
-                     onClick={() => setIsSettingsExpanded(!isSettingsExpanded)}
-                     className={`flex items-center justify-between p-3.5 rounded-2xl transition-all group ${isSettingsExpanded ? 'bg-white/5 text-white' : 'text-zinc-400 hover:bg-white/5 hover:text-white'}`}
-                   >
-                     <div className="flex items-center gap-3">
-                       <Settings className={`w-4 h-4 transition-colors ${isSettingsExpanded ? 'text-[#CCFF00]' : 'text-zinc-600 group-hover:text-[#CCFF00]'}`} />
-                       <span className="text-[11px] font-black uppercase tracking-widest">{t('settings')}</span>
-                     </div>
-                     <motion.div
-                       animate={{ rotate: isSettingsExpanded ? 180 : 0 }}
-                       transition={{ duration: 0.2 }}
-                     >
-                       <ArrowDownRight className="w-3 h-3 text-zinc-600" />
-                     </motion.div>
-                   </button>
-
-                   <AnimatePresence>
-                     {isSettingsExpanded && (
-                       <motion.div
-                         initial={{ height: 0, opacity: 0 }}
-                         animate={{ height: "auto", opacity: 1 }}
-                         exit={{ height: 0, opacity: 0 }}
-                         className="overflow-hidden bg-white/[0.02] rounded-2xl mt-1 mx-1"
-                       >
-                         <div className="p-3 space-y-2">
-                           <p className="text-[7px] font-mono text-zinc-600 uppercase tracking-widest px-2 mb-1">{t('chooseLang')}</p>
-                           {[
-                             { id: 'vi', label: t('vi') },
-                             { id: 'en', label: t('en') },
-                             { id: 'zh', label: t('zh') },
-                           ].map((l) => (
-                             <button
-                               key={l.id}
-                               onClick={() => {
-                                 const nxtLang = l.id;
-                                 setLang(nxtLang);
-                                 addNotification(translations[nxtLang]?.['langSwitched'] || translations['en']['langSwitched']);
-                               }}
-                               className={`w-full flex items-center justify-between p-2.5 rounded-xl text-[10px] font-bold uppercase transition-all ${lang === l.id ? 'bg-[#CCFF00]/10 text-[#CCFF00]' : 'text-zinc-500 hover:text-white'}`}
-                             >
-                               {l.label}
-                               {lang === l.id && <div className="w-1 h-1 rounded-full bg-[#CCFF00]" />}
-                             </button>
-                           ))}
-                         </div>
-                       </motion.div>
-                     )}
-                   </AnimatePresence>
-                 </div>
-
                  <button
                    onClick={handleLogout}
                    className="flex items-center gap-3 p-3.5 rounded-2xl text-zinc-400 hover:bg-red-500/5 hover:text-red-500 transition-all group"
@@ -14467,47 +14701,47 @@ export default function App() {
                       <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">{lang === 'vi' ? 'Doanh thu dự kiến thu hồi từ tái ký' : (lang === 'zh' ? '从续费办卡中预期回收的营业额' : 'Expected revenue recovered from active renewals')}</p>
+                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">{lang === 'vi' ? 'Tổng phí gói tập chưa thu hồi' : (lang === 'zh' ? '临期会员续费预估' : 'Total estimated renewal revenue')}</p>
                 </div>
 
                 {/* Metric 3 */}
-                <div className="bg-zinc-950/60 backdrop-blur-md border border-white/10 hover:border-amber-500/40 p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group shadow-xl">
-                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-amber-500 to-rose-500 opacity-70 group-hover:opacity-100 transition-opacity" />
+                <div className="bg-zinc-950/60 backdrop-blur-md border border-white/10 hover:border-red-500/40 p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group shadow-xl">
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-red-500 to-rose-600 opacity-70 group-hover:opacity-100 transition-opacity" />
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[9px] font-black font-mono text-zinc-500 uppercase tracking-widest">{lang === 'vi' ? 'HẠN CẢNH BÁO' : (lang === 'zh' ? '预警期限' : 'WARNING THRESHOLD')}</p>
-                      <p className="text-xl md:text-2xl font-black text-amber-400 mt-1 font-mono tracking-tight font-mono uppercase italic">
-                        {lang === 'vi' ? '7 Ngày Chuẩn' : (lang === 'zh' ? '7天标准' : '7 Standard Days')}
+                      <p className="text-[9px] font-black font-mono text-zinc-500 uppercase tracking-widest">{lang === 'vi' ? 'CẦN XỬ LÝ GẤP (<3 NGÀY)' : (lang === 'zh' ? '紧急跟进 (<3天内)' : 'CRITICAL ACTION (<3D)')}</p>
+                      <p className="text-xl md:text-2xl font-black text-rose-400 mt-1 font-mono tracking-tight text-red-400">
+                        {members.filter(m => {
+                          const days = (new Date(m.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+                          return m.status === 'Hoạt động' && days > 0 && days <= 3;
+                        }).length}
                       </p>
                     </div>
-                    <div className="p-2 bg-white/5 rounded-xl text-amber-400 group-hover:scale-110 transition-transform">
+                    <div className="p-2 bg-white/5 rounded-xl text-rose-400 group-hover:scale-110 transition-transform">
                       <AlertCircle className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">
-                    {lang === 'vi' ? 'Thời gian khuyến nghị CSKH' : lang === 'zh' ? '建议客服跟进提醒周期' : 'Recommended support follow-up threshold'}
-                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">{lang === 'vi' ? 'Hội viên sắp hết thời gian tập' : (lang === 'zh' ? '会员临期少于3天' : 'Members expiring in under 3 days')}</p>
                 </div>
 
                 {/* Metric 4 */}
-                <div className="bg-zinc-950/60 backdrop-blur-md border border-white/10 hover:border-[#CCFF00]/40 p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group shadow-xl">
-                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-teal-400 to-[#CCFF00] opacity-70 group-hover:opacity-100 transition-opacity" />
+                <div className="bg-zinc-950/60 backdrop-blur-md border border-white/10 hover:border-indigo-500/40 p-4 rounded-3xl transition-all duration-300 relative overflow-hidden group shadow-xl">
+                  <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-indigo-500 to-purple-600 opacity-70 group-hover:opacity-100 transition-opacity" />
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-[9px] font-black font-mono text-zinc-500 uppercase tracking-widest">
-                        {lang === 'vi' ? 'TỶ LỆ GIA HẠN TB' : lang === 'zh' ? '平均有效续期率' : 'AVERAGE RENEWAL RATE'}
-                      </p>
-                      <p className="text-xl md:text-2xl font-black text-[#CCFF55] mt-1 font-mono tracking-tight text-[#CCFF00]">
-                        85.4%
+                      <p className="text-[9px] font-black font-mono text-zinc-500 uppercase tracking-widest">{lang === 'vi' ? 'TỶ LỆ KHẨN CẤP' : (lang === 'zh' ? '临期人员占比' : 'URGENCY RATIO')}</p>
+                      <p className="text-xl md:text-2xl font-black text-indigo-400 mt-1 font-mono tracking-tight font-mono">
+                        {((members.filter(m => {
+                          const days = (new Date(m.expiryDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24);
+                          return m.status === 'Hoạt động' && days > 0 && days <= 7;
+                        }).length / (members.filter(m => m.status === 'Hoạt động').length || 1)) * 100).toFixed(1)}%
                       </p>
                     </div>
-                    <div className="p-2 bg-white/5 rounded-xl text-[#CCFF00] group-hover:scale-110 transition-transform">
-                      <BarChart3 className="w-5 h-5" />
+                    <div className="p-2 bg-white/5 rounded-xl text-indigo-400 group-hover:scale-110 transition-transform">
+                      <TrendingUp className="w-5 h-5" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">
-                    {lang === 'vi' ? 'Tỷ lệ hội viên đồng ý tái ký trung bình' : lang === 'zh' ? '平均同意再次签署合同的会员占比' : 'Average rate of members signing renewal contracts'}
-                  </p>
+                  <p className="text-[10px] text-zinc-500 mt-2 italic font-medium">{lang === 'vi' ? 'Phần trăm hội viên sắp hết hạn' : (lang === 'zh' ? '在馆活跃临期人数比例' : 'Percentage of expiring active members')}</p>
                 </div>
               </div>
 
@@ -14518,16 +14752,16 @@ export default function App() {
                     <thead className="sticky top-0 bg-zinc-950/90 backdrop-blur-md z-20">
                       <tr className="text-[10px] font-black font-mono text-zinc-500 uppercase tracking-widest border-b border-white/10 italic">
                         <th className="px-8 py-5">
-                          {lang === 'vi' ? 'THÔNG TIN HỘI VIÊN' : lang === 'zh' ? '到期会员基本信息' : 'MEMBER GENERAL INFO'}
+                          {lang === 'vi' ? 'THÔNG TIN HỘI VIÊN' : lang === 'zh' ? '临期会员基本信息' : 'EXPIRING MEMBER INFO'}
                         </th>
                         <th className="px-8 py-5">
-                          {lang === 'vi' ? 'GÓI TẬP ĐANG SỬ DỤNG' : lang === 'zh' ? '当前有效套餐方案' : 'ACTIVE EXERCISE PACKAGE'}
+                          {lang === 'vi' ? 'GÓI TẬP ĐANG SỬ DỤNG' : lang === 'zh' ? '当前有效套餐方案' : 'CURRENT CONTRACT PLAN'}
                         </th>
                         <th className="px-8 py-5">
-                          {lang === 'vi' ? 'THỜI HẠN CUỐI CÙNG' : lang === 'zh' ? '合同终止具体日期' : 'FINAL EXPIRY DUE'}
+                          {lang === 'vi' ? 'NGÀY HẾT HẠN CHÀO BÁN' : lang === 'zh' ? '合同正式到期时间' : 'OFFICIAL EXPIRY'}
                         </th>
                         <th className="px-8 py-5">
-                          {lang === 'vi' ? 'CHI TIẾT SỐ NGÀY CÒN LẠI' : lang === 'zh' ? '剩余可到店天数' : 'DAYS TO DEADLINE'}
+                          {lang === 'vi' ? 'SỐ NGÀY CÒN LẠI' : lang === 'zh' ? '可到店天数' : 'DAYS TO DEADLINE'}
                         </th>
                         <th className="px-8 py-5 text-center">
                           {lang === 'vi' ? 'THAO TÁC XỬ LÝ KHẨN CẤP' : lang === 'zh' ? '紧急跟进处理' : 'CRITICAL ACTIONS'}
@@ -14785,6 +15019,90 @@ export default function App() {
               className="space-y-6 h-full flex flex-col overflow-hidden px-5 md:px-5"
             >
               {(() => {
+                const getLocalizedCategory = (cat: string) => {
+                  if (!cat) return "";
+                  const c = cat.trim().toLowerCase();
+                  if (c === "cardio") {
+                    return lang === 'vi' ? "Cardio" : (lang === 'zh' ? "有氧设备" : "Cardio");
+                  }
+                  if (c === "sức mạnh" || c === "strength") {
+                    return lang === 'vi' ? "Sức mạnh" : (lang === 'zh' ? "力量训练" : "Strength");
+                  }
+                  if (c === "tự do" || c === "free weights" || c === "free weight" || c === "tự do ") {
+                    return lang === 'vi' ? "Tự do" : (lang === 'zh' ? "自由力量" : "Free Weights");
+                  }
+                  if (c === "nội thất" || c === "interior" || c === "furniture") {
+                    return lang === 'vi' ? "Thiết bị nội thất" : (lang === 'zh' ? "环境与家具" : "Interior & Furniture");
+                  }
+                  if (c === "phụ kiện" || c === "phu kien" || c === "accessories" || c === "accessory") {
+                    return lang === 'vi' ? "Phụ kiện" : (lang === 'zh' ? "配件" : "Accessories");
+                  }
+                  return cat;
+                };
+
+                const getLocalizedEquipmentName = (name: string) => {
+                  if (!name) return "";
+                  const n = name.trim();
+                  if (n === "Máy chạy bộ Matrix T50") {
+                    return lang === 'vi' ? "Máy chạy bộ Matrix T50" : (lang === 'zh' ? "Matrix T50 跑步机" : "Matrix T50 Treadmill");
+                  }
+                  if (n === "Giàn tạ đa năng Impulse") {
+                    return lang === 'vi' ? "Giàn tạ đa năng Impulse" : (lang === 'zh' ? "Impulse 综合训练架" : "Impulse Multi-Gym Station");
+                  }
+                  if (n === "Xe đạp tập thể dục Spin Bike") {
+                    return lang === 'vi' ? "Xe đạp tập thể dục Spin Bike" : (lang === 'zh' ? "Spin Bike 动感单车" : "Spin Bike Exercise Cycle");
+                  }
+                  if (n === "Bộ tạ tay cao su Jordan 5kg - 30kg") {
+                    return lang === 'vi' ? "Bộ tạ tay cao su Jordan 5kg - 30kg" : (lang === 'zh' ? "Jordan 橡胶哑铃组 5kg - 30kg" : "Jordan Rubber Dumbbell Set 5kg - 30kg");
+                  }
+                  if (n === "Tạ đòn Olympic Impulse 2.2m") {
+                    return lang === 'vi' ? "Tạ đòn Olympic Impulse 2.2m" : (lang === 'zh' ? "Impulse 奥林匹克杠铃杆 2.2米" : "Impulse Olympic Barbell 2.2m");
+                  }
+                  if (n === "Điều hòa Daikin Inverter 2.5 HP") {
+                    return lang === 'vi' ? "Điều hòa Daikin Inverter 2.5 HP" : (lang === 'zh' ? "大金变频空调 2.5匹" : "Daikin Inverter Air Conditioner 2.5 HP");
+                  }
+                  if (n === "Camera giám sát Hikvision IP 4MP") {
+                    return lang === 'vi' ? "Camera giám sát Hikvision IP 4MP" : (lang === 'zh' ? "海康威视 400万像素红外摄像机" : "Hikvision IP Surveillance Camera 4MP");
+                  }
+                  if (n === "Đèn LED sấy hồng ngoại") {
+                    return lang === 'vi' ? "Đèn LED sấy hồng ngoại" : (lang === 'zh' ? "红外线理疗理疗灯" : "Infrared Heated LED Lamp");
+                  }
+                  if (n === "Tủ locker sắt khóa từ 18 ngăn") {
+                    return lang === 'vi' ? "Tủ locker sắt khóa từ 18 ngăn" : (lang === 'zh' ? "18门磁卡锁铁皮储物柜" : "18-Compartment Electronic Lock Locker");
+                  }
+                  return name;
+                };
+
+                const getLocalizedLocation = (loc: string) => {
+                  if (!loc) return "";
+                  const l = loc.trim().toLowerCase();
+                  if (l === "khu vực cardio a" || l === "cardio area a") {
+                    return lang === 'vi' ? "Khu vực Cardio A" : (lang === 'zh' ? "有氧 A 区" : "Cardio Area A");
+                  }
+                  if (l === "khu vực cardio b" || l === "cardio area b") {
+                    return lang === 'vi' ? "Khu vực Cardio B" : (lang === 'zh' ? "有氧 B 区" : "Cardio Area B");
+                  }
+                  if (l === "khu vực tạ a" || l === "weight area a") {
+                    return lang === 'vi' ? "Khu vực tạ A" : (lang === 'zh' ? "力量 A 区" : "Weight Area A");
+                  }
+                  if (l === "khu vực tạ b" || l === "weight area b") {
+                    return lang === 'vi' ? "Khu vực tạ B" : (lang === 'zh' ? "力量 B 区" : "Weight Area B");
+                  }
+                  if (l === "khu vực lễ tân" || l === "reception") {
+                    return lang === 'vi' ? "Khu vực lễ tân" : (lang === 'zh' ? "前台接待区" : "Reception Area");
+                  }
+                  if (l.includes("khu vực a") || l.endsWith(" a") || l === "a") {
+                    return lang === 'vi' ? "Khu vực A" : (lang === 'zh' ? "A 区" : "Area A");
+                  }
+                  if (l.includes("khu vực b") || l.endsWith(" b") || l === "b") {
+                    return lang === 'vi' ? "Khu vực B" : (lang === 'zh' ? "B 区" : "Area B");
+                  }
+                  if (l.includes("khu vực c") || l.endsWith(" c") || l === "c") {
+                    return lang === 'vi' ? "Khu vực C" : (lang === 'zh' ? "C 区" : "Area C");
+                  }
+                  return loc;
+                };
+
                 const isInteriorEquipment = (eq: any) => {
                   const cat = (eq.category || "").toLowerCase();
                   const name = (eq.name || "").toLowerCase();
@@ -14837,15 +15155,15 @@ export default function App() {
                             const loc = location || "";
                             const locLower = loc.toLowerCase();
                             if (locLower.includes("khu vực a") || locLower.endsWith(" a") || locLower === "a") {
-                              return lang === 'vi' ? "Khu vực A" : "Area A";
+                              return lang === 'vi' ? "Khu vực A" : (lang === 'zh' ? "Khu A" : "Area A");
                             }
                             if (locLower.includes("khu vực b") || locLower.endsWith(" b") || locLower === "b") {
-                              return lang === 'vi' ? "Khu vực B" : "Area B";
+                              return lang === 'vi' ? "Khu vực B" : (lang === 'zh' ? "Khu B" : "Area B");
                             }
                             if (locLower.includes("khu vực c") || locLower.endsWith(" c") || locLower === "c") {
-                              return lang === 'vi' ? "Khu vực C" : "Area C";
+                              return lang === 'vi' ? "Khu vực C" : (lang === 'zh' ? "Khu C" : "Area C");
                             }
-                            return loc || (lang === 'vi' ? "Khu vực khác" : "Other Area");
+                            return loc || (lang === 'vi' ? "Khu vực khác" : (lang === 'zh' ? "其他区域" : "Other Area"));
                           };
 
                           const uniqueParentAreas = Array.from(new Set(currentTypeEquipments.map(eq => getParentAreaName(eq.location)).filter(Boolean)));
@@ -14859,28 +15177,28 @@ export default function App() {
                                     : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
                                   }`}
                               >
-                                {lang === 'vi' ? 'TẤT CẢ KHU VỰC' : 'ALL AREAS'} ({currentTypeEquipments.length})
+                                {lang === 'vi' ? 'TẤT CẢ KHU VỰC' : (lang === 'zh' ? '所有区域' : 'ALL AREAS')} ({currentTypeEquipments.length})
                               </button>
-                              {uniqueParentAreas.map(parentArea => {
-                                const count = currentTypeEquipments.filter(eq => getParentAreaName(eq.location) === parentArea).length;
-                                return (
-                                  <button 
-                                    key={parentArea}
-                                    onClick={() => setSelectedEquipmentLocation(parentArea)}
-                                    className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${
-                                      selectedEquipmentLocation === parentArea 
-                                        ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)]" 
-                                        : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
-                                    }`}
-                                  >
-                                    {parentArea.toUpperCase()} ({count})
-                                  </button>
-                                );
-                              })}
-                            </>
-                          );
-                        })()}
-                      </div>
+                               {uniqueParentAreas.map(parentArea => {
+                                 const count = currentTypeEquipments.filter(eq => getParentAreaName(eq.location) === parentArea).length;
+                                 return (
+                                   <button 
+                                     key={parentArea}
+                                     onClick={() => setSelectedEquipmentLocation(parentArea)}
+                                     className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all shrink-0 ${
+                                       selectedEquipmentLocation === parentArea 
+                                         ? "bg-[#CCFF00] text-black border-[#CCFF00] shadow-[0_4px_12px_rgba(204,255,0,0.15)]" 
+                                         : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
+                                     }`}
+                                   >
+                                     {parentArea.toUpperCase()} ({count})
+                                   </button>
+                                 );
+                               })}
+                             </>
+                           );
+                         })()}
+                       </div>
                     </div>
 
                     <div className="overflow-y-auto custom-scrollbar pb-10 flex-1 min-h-0 space-y-8">
@@ -14889,15 +15207,15 @@ export default function App() {
                           const loc = location || "";
                           const locLower = loc.toLowerCase();
                           if (locLower.includes("khu vực a") || locLower.endsWith(" a") || locLower === "a") {
-                            return lang === 'vi' ? "Khu vực A" : "Area A";
+                            return lang === 'vi' ? "Khu vực A" : (lang === 'zh' ? "Khu A" : "Area A");
                           }
                           if (locLower.includes("khu vực b") || locLower.endsWith(" b") || locLower === "b") {
-                            return lang === 'vi' ? "Khu vực B" : "Area B";
+                            return lang === 'vi' ? "Khu vực B" : (lang === 'zh' ? "Khu B" : "Area B");
                           }
                           if (locLower.includes("khu vực c") || locLower.endsWith(" c") || locLower === "c") {
-                            return lang === 'vi' ? "Khu vực C" : "Area C";
+                            return lang === 'vi' ? "Khu vực C" : (lang === 'zh' ? "Khu C" : "Area C");
                           }
-                          return loc || (lang === 'vi' ? "Khu vực khác" : "Other Area");
+                          return loc || (lang === 'vi' ? "Khu vực khác" : (lang === 'zh' ? "其他区域" : "Other Area"));
                         };
 
                         const filtered = currentTypeEquipments.filter(eq => {
@@ -14966,7 +15284,7 @@ export default function App() {
                                 {loc}
                               </h3>
                               <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic block mt-0.5">
-                                {grouped[loc].length} {lang === 'vi' ? 'máy móc tổng cộng' : 'total equipments'}
+                                {grouped[loc].length} {lang === 'vi' ? 'máy móc tổng cộng' : (lang === 'zh' ? '台设备总计' : 'total equipments')}
                               </span>
                             </div>
                           </div>
@@ -14986,7 +15304,7 @@ export default function App() {
                                   : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
                               }`}
                             >
-                              {lang === 'vi' ? 'Khu vực Cardio' : 'Cardio area'}
+                              {lang === 'vi' ? 'Khu vực Cardio' : (lang === 'zh' ? '有氧区' : 'Cardio area')}
                             </button>
                             <button
                               onClick={() => {
@@ -15001,7 +15319,7 @@ export default function App() {
                                   : "bg-white/5 text-zinc-400 border-white/5 hover:text-white hover:bg-white/10"
                               }`}
                             >
-                              {lang === 'vi' ? 'Khu vực tạ' : 'Weight area'}
+                              {lang === 'vi' ? 'Khu vực tạ' : (lang === 'zh' ? '力量训练区' : 'Weight area')}
                             </button>
                           </div>
                         </div>
@@ -15009,7 +15327,7 @@ export default function App() {
                         {/* Section Grid */}
                         {displayedEquipments.length === 0 ? (
                           <div className="py-12 bg-zinc-950/10 rounded-2xl border border-dashed border-white/5 text-center text-zinc-500 font-mono text-[10px] uppercase tracking-widest">
-                            {lang === 'vi' ? 'Không tìm thấy thiết bị phù hợp trong bộ lọc này' : 'No matching equipment found in this filter'}
+                            {lang === 'vi' ? 'Không tìm thấy thiết bị phù hợp trong bộ lọc này' : (lang === 'zh' ? '未找到符合过滤条件的设备' : 'No matching equipment found in this filter')}
                           </div>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -15023,11 +15341,11 @@ export default function App() {
                                                  eq.status === 'BROKEN' ? t('broken') :
                                                  t('underMaintenance');
                               return (
-                                <div key={eq.id} className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between hover:border-[#CCFF00]/20 transition-all group relative">
+                                  <div key={eq.id} className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between hover:border-[#CCFF00]/20 transition-all group relative">
                                   <div className="flex justify-between items-start mb-4">
                                     <div>
-                                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic">{eq.category} // {eq.code}</span>
-                                      <h3 className="text-sm font-black uppercase italic text-white group-hover:text-[#CCFF00] transition-colors mt-1 line-clamp-1">{eq.name}</h3>
+                                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest italic">{getLocalizedCategory(eq.category)} // {eq.code}</span>
+                                      <h3 className="text-sm font-black uppercase italic text-white group-hover:text-[#CCFF00] transition-colors mt-1 line-clamp-1">{getLocalizedEquipmentName(eq.name)}</h3>
                                     </div>
                                     <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border shrink-0 ${statusColor}`}>
                                       {statusText}
@@ -15037,7 +15355,7 @@ export default function App() {
                                   <div className="space-y-2 mb-6 font-mono text-[10px] text-zinc-500">
                                     <div className="flex justify-between">
                                       <span className="uppercase">{t('location')}:</span>
-                                      <span className="text-zinc-400 font-bold">{eq.location}</span>
+                                      <span className="text-zinc-400 font-bold">{getLocalizedLocation(eq.location)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="uppercase">{t('lastMaintenance')}:</span>
@@ -15119,12 +15437,12 @@ export default function App() {
                             <tr key={task.id} className="hover:bg-white/[0.01] transition-colors group">
                                <td className="px-8 py-6">
                                   <div className="flex flex-col">
-                                    <span className="text-xs font-black uppercase italic text-white">{task.equipmentName}</span>
+                                    <span className="text-xs font-black uppercase italic text-white">{translateValue(task.equipmentName)}</span>
                                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mt-1 italic">{t(task.taskType.toLowerCase())}</span>
                                   </div>
                                </td>
                                <td className="px-8 py-6 font-mono text-xs text-zinc-400">{task.scheduledDate}</td>
-                               <td className="px-8 py-6 text-xs text-zinc-300 font-medium">{task.performer}</td>
+                               <td className="px-8 py-6 text-xs text-zinc-300 font-medium">{translateValue(task.performer)}</td>
                                <td className="px-8 py-6">
                                   <div className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                                     task.priority === 'HIGH' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
@@ -15178,23 +15496,23 @@ export default function App() {
               {/* Stat cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0 font-sans">
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
-                  <div className="text-[3rem] font-black text-white/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">TỔNG</div>
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Tổng số sự cố</span>
+                  <div className="text-[3rem] font-black text-white/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">{lang === 'vi' ? 'TỔNG' : (lang === 'zh' ? '总计' : 'TOTAL')}</div>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Tổng số sự cố' : (lang === 'zh' ? '故障总数' : 'Total Incidents')}</span>
                   <div className="text-3xl font-black italic text-white mt-1">{incidents.length}</div>
                 </div>
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
-                  <div className="text-[3rem] font-black text-red-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">MỚI</div>
-                  <span className="text-[10px] font-mono text-red-500 uppercase tracking-widest italic font-bold">Lỗi mới báo</span>
+                  <div className="text-[3rem] font-black text-red-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">{lang === 'vi' ? 'MỚI' : (lang === 'zh' ? '新增' : 'NEW')}</div>
+                  <span className="text-[10px] font-mono text-red-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Lỗi mới báo' : (lang === 'zh' ? '新报故障' : 'Newly Reported')}</span>
                   <div className="text-3xl font-black italic text-red-500 mt-1">{incidents.filter(i => i.status === "NEW").length}</div>
                 </div>
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
-                  <div className="text-[3rem] font-black text-orange-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">SỬA</div>
-                  <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest italic font-bold">Đang xử lý</span>
+                  <div className="text-[3rem] font-black text-orange-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">{lang === 'vi' ? 'SỬA' : (lang === 'zh' ? '维修' : 'FIXING')}</div>
+                  <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Đang xử lý' : (lang === 'zh' ? '处理中' : 'In Progress')}</span>
                   <div className="text-3xl font-black italic text-orange-500 mt-1">{incidents.filter(i => i.status === "IN_PROGRESS").length}</div>
                 </div>
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
-                  <div className="text-[3rem] font-black text-emerald-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">XONG</div>
-                  <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest italic font-bold">Đã khắc phục</span>
+                  <div className="text-[3rem] font-black text-emerald-500/5 absolute right-4 top-2 pointer-events-none group-hover:scale-110 transition-transform font-display">{lang === 'vi' ? 'XONG' : (lang === 'zh' ? '修复' : 'DONE')}</div>
+                  <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Đã khắc phục' : (lang === 'zh' ? '已修复' : 'Resolved')}</span>
                   <div className="text-3xl font-black italic text-emerald-500 mt-1">{incidents.filter(i => i.status === "RESOLVED").length}</div>
                 </div>
               </div>
@@ -15208,7 +15526,7 @@ export default function App() {
                       type="text"
                       value={incidentSearch}
                       onChange={(e) => setIncidentSearch(e.target.value)}
-                      placeholder="Tìm sự cố, thiết bị..."
+                      placeholder={lang === 'vi' ? 'Tìm sự cố, thiết bị...' : (lang === 'zh' ? '搜索故障、设备...' : 'Search incidents, equipment...')}
                       className="w-full bg-zinc-950 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-black uppercase tracking-widest focus:border-[#CCFF00] outline-none transition-all placeholder:text-zinc-800 text-white"
                     />
                   </div>
@@ -15219,10 +15537,10 @@ export default function App() {
                     onChange={(e) => setIncidentStatusFilter(e.target.value)}
                     className="bg-zinc-900 border border-white/10 text-zinc-450 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl outline-none"
                   >
-                    <option value="ALL">TẤT CẢ TRẠNG THÁI</option>
-                    <option value="NEW">MỚI KHAI BÁO</option>
-                    <option value="IN_PROGRESS">ĐANG XỬ LÝ</option>
-                    <option value="RESOLVED">ĐÃ KHẮC PHỤC</option>
+                    <option value="ALL">{lang === 'vi' ? 'TẤT CẢ TRẠNG THÁI' : (lang === 'zh' ? '所有状态' : 'ALL STATUSES')}</option>
+                    <option value="NEW">{lang === 'vi' ? 'MỚI KHAI BÁO' : (lang === 'zh' ? '新申报' : 'NEWLY REPORTED')}</option>
+                    <option value="IN_PROGRESS">{lang === 'vi' ? 'ĐANG XỬ LÝ' : (lang === 'zh' ? '正在处理' : 'IN PROGRESS')}</option>
+                    <option value="RESOLVED">{lang === 'vi' ? 'ĐÃ KHẮC PHỤC' : (lang === 'zh' ? '已修复' : 'RESOLVED')}</option>
                   </select>
 
                   {/* Severity Filter */}
@@ -15231,10 +15549,10 @@ export default function App() {
                     onChange={(e) => setIncidentSeverityFilter(e.target.value)}
                     className="bg-zinc-900 border border-white/10 text-zinc-450 text-[10px] font-black uppercase tracking-widest px-4 py-3 rounded-xl outline-none"
                   >
-                    <option value="ALL">TẤT CẢ MỨC ĐỘ</option>
-                    <option value="LOW">THẤP</option>
-                    <option value="MEDIUM">TRUNG BÌNH</option>
-                    <option value="HIGH">NGHIÊM TRỌNG</option>
+                    <option value="ALL">{lang === 'vi' ? 'TẤT CẢ MỨC ĐỘ' : (lang === 'zh' ? '所有严重程度' : 'ALL SEVERITIES')}</option>
+                    <option value="LOW">{lang === 'vi' ? 'THẤP' : (lang === 'zh' ? '低' : 'LOW')}</option>
+                    <option value="MEDIUM">{lang === 'vi' ? 'TRUNG BÌNH' : (lang === 'zh' ? '中' : 'MEDIUM')}</option>
+                    <option value="HIGH">{lang === 'vi' ? 'NGHIÊM TRỌNG' : (lang === 'zh' ? '高' : 'HIGH / CRITICAL')}</option>
                   </select>
                 </div>
 
@@ -15255,7 +15573,7 @@ export default function App() {
                   className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(220,38,38,0.15)] hover:scale-105 active:scale-95 transition-all outline-none border-none cursor-pointer"
                 >
                   <AlertTriangle className="w-4 h-4 text-white" />
-                  Báo cáo sự cố mới
+                  {lang === 'vi' ? 'Báo cáo sự cố mới' : (lang === 'zh' ? '报告新故障' : 'Report New Incident')}
                 </button>
               </div>
 
@@ -15265,12 +15583,12 @@ export default function App() {
                   <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 bg-zinc-950 z-10">
                       <tr className="text-[10px] font-black font-mono text-zinc-500 uppercase tracking-[0.2em] border-b border-white/5 italic">
-                        <th className="px-8 py-6">Thiết bị / Vị trí</th>
-                        <th className="px-8 py-6">Mô tả sự cố</th>
-                        <th className="px-8 py-6">Người báo / Ngày</th>
-                        <th className="px-8 py-6">Mức độ</th>
-                        <th className="px-8 py-6">Trạng thái</th>
-                        <th className="px-8 py-6 text-center">Hành động</th>
+                        <th className="px-8 py-6">{lang === 'vi' ? 'Thiết bị / Vị trí' : (lang === 'zh' ? '设备 / 位置' : 'Equipment / Location')}</th>
+                        <th className="px-8 py-6">{lang === 'vi' ? 'Mô tả sự cố' : (lang === 'zh' ? '故障描述' : 'Incident Description')}</th>
+                        <th className="px-8 py-6">{lang === 'vi' ? 'Người báo / Ngày' : (lang === 'zh' ? '报告人 / 日期' : 'Reporter / Date')}</th>
+                        <th className="px-8 py-6">{lang === 'vi' ? 'Mức độ' : (lang === 'zh' ? '严重程度' : 'Severity')}</th>
+                        <th className="px-8 py-6">{lang === 'vi' ? 'Trạng thái' : (lang === 'zh' ? '状态' : 'Status')}</th>
+                        <th className="px-8 py-6 text-center">{lang === 'vi' ? 'Hành động' : (lang === 'zh' ? '操作' : 'Actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.02]">
@@ -15287,7 +15605,7 @@ export default function App() {
                           <td colSpan={6} className="py-24 text-center">
                             <div className="flex flex-col items-center opacity-20">
                               <AlertCircle className="w-12 h-12 mb-4" />
-                              <p className="text-[10px] font-mono uppercase tracking-[0.5em]">Không có sự cố nào được tìm thấy</p>
+                              <p className="text-[10px] font-mono uppercase tracking-[0.5em]">{lang === 'vi' ? 'Không có sự cố nào được tìm thấy' : (lang === 'zh' ? '未找到任何故障' : 'No incidents found')}</p>
                             </div>
                           </td>
                         </tr>
@@ -15307,29 +15625,29 @@ export default function App() {
                           const statusColor = inc.status === 'NEW' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                               inc.status === 'IN_PROGRESS' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
                                               'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
-                          const statusText = inc.status === 'NEW' ? 'MỚI BÁO' :
-                                             inc.status === 'IN_PROGRESS' ? 'ĐANG SỬA' :
-                                             'ĐÃ XỬ LÝ';
+                          const statusText = inc.status === 'NEW' ? (lang === 'vi' ? 'MỚI BÁO' : lang === 'zh' ? '新申报' : 'NEW REPORT') :
+                                             inc.status === 'IN_PROGRESS' ? (lang === 'vi' ? 'ĐANG SỬA' : lang === 'zh' ? '处理中' : 'FIXING') :
+                                             (lang === 'vi' ? 'ĐÃ XỬ LÝ' : lang === 'zh' ? '已修复' : 'RESOLVED');
                           return (
                             <tr key={inc.id} className="hover:bg-white/[0.01] transition-colors group">
                               <td className="px-8 py-6">
                                 <div className="flex flex-col font-sans">
-                                  <span className="text-xs font-black uppercase italic text-white">{inc.equipmentName}</span>
-                                  <span className="text-[9px] font-mono text-zinc-500 mt-1 italic uppercase tracking-wider">{inc.location}</span>
+                                  <span className="text-xs font-black uppercase italic text-white">{translateValue(inc.equipmentName)}</span>
+                                  <span className="text-[9px] font-mono text-zinc-500 mt-1 italic uppercase tracking-wider">{translateValue(inc.location)}</span>
                                 </div>
                               </td>
                               <td className="px-8 py-6 max-w-sm">
-                                <p className="text-xs text-zinc-300 font-medium line-clamp-2">{inc.description}</p>
+                                <p className="text-xs text-zinc-300 font-medium line-clamp-2">{translateValue(inc.description)}</p>
                               </td>
                               <td className="px-8 py-6">
                                 <div className="flex flex-col">
-                                  <span className="text-xs text-zinc-300 font-medium">{inc.reporter}</span>
+                                  <span className="text-xs text-zinc-300 font-medium">{translateValue(inc.reporter)}</span>
                                   <span className="text-[10px] font-mono text-zinc-500 mt-1">{inc.reportedDate}</span>
                                 </div>
                               </td>
                               <td className="px-8 py-6">
                                 <span className={`px-2.5 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border ${severityColor}`}>
-                                  {inc.severity === "HIGH" ? 'CAO // KHẨN CẤP' : inc.severity === "MEDIUM" ? 'TRUNG BÌNH' : 'THẤP'}
+                                  {inc.severity === "HIGH" ? (lang === 'vi' ? 'CAO // KHẨN CẤP' : lang === 'zh' ? '高 // 紧急' : 'HIGH // CRITICAL') : inc.severity === "MEDIUM" ? (lang === 'vi' ? 'TRUNG BÌNH' : lang === 'zh' ? '中' : 'MEDIUM') : (lang === 'vi' ? 'THẤP' : lang === 'zh' ? '低' : 'LOW')}
                                 </span>
                               </td>
                               <td className="px-8 py-6">
@@ -15339,7 +15657,7 @@ export default function App() {
                                   </span>
                                   {inc.status === 'RESOLVED' && inc.resolutionNotes && (
                                     <div className="bg-emerald-500/5 text-emerald-400 p-2.5 rounded-lg border border-emerald-500/10 text-[10px] font-mono">
-                                      <span className="font-extrabold uppercase text-emerald-500">KHẮC PHỤC: </span> {inc.resolutionNotes}
+                                      <span className="font-extrabold uppercase text-emerald-500">{lang === 'vi' ? 'KHẮC PHỤC: ' : (lang === 'zh' ? '修复方案: ' : 'RESOLUTION: ')}</span> {translateValue(inc.resolutionNotes)}
                                     </div>
                                   )}
                                 </div>
@@ -15357,12 +15675,12 @@ export default function App() {
                                           setEquipments(prev => prev.map(e => e.id === matchingEq.id ? { ...e, status: "UNDER_MAINTENANCE" } : e));
                                         }
 
-                                        addNotification("Đã bắt đầu xử lý sự cố & đưa thiết bị vào bảo trì.");
+                                        addNotification(lang === 'vi' ? "Đã bắt đầu xử lý sự cố & đưa thiết bị vào bảo trì." : (lang === 'zh' ? "已开始处理故障，并将设备设为维修状态。" : "Started fixing the incident & placed equipment under maintenance."));
                                       }}
                                       className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border-none outline-none"
-                                      title="Bắt đầu xử lý sửa chữa"
+                                      title={lang === 'vi' ? "Bắt đầu xử lý sửa chữa" : (lang === 'zh' ? "开始执行维修" : "Start repair process")}
                                     >
-                                      BẮT ĐẦU SỬA
+                                      {lang === 'vi' ? 'BẮT ĐẦU SỬA' : (lang === 'zh' ? '开始维修' : 'START REPAIR')}
                                     </button>
                                   )}
                                   
@@ -15378,9 +15696,9 @@ export default function App() {
                                           ? "bg-zinc-800 text-zinc-500 opacity-40 cursor-not-allowed"
                                           : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
                                       }`}
-                                      title={inc.status === "NEW" ? "Hãy nhấn 'BẮT ĐẦU SỬA' trước khi báo cáo xử lý xong" : "Đánh dấu đã khắc phục hoàn thành"}
+                                      title={inc.status === "NEW" ? (lang === 'vi' ? "Hãy nhấn 'BẮT ĐẦU SỬA' trước khi báo cáo xử lý xong" : (lang === 'zh' ? "请在报告完成前点击“开始维修”" : "Please click 'START REPAIR' before marking as resolved")) : (lang === 'vi' ? "Đánh dấu đã khắc phục hoàn thành" : (lang === 'zh' ? "标记为已完成修复" : "Mark as successfully resolved"))}
                                     >
-                                      XỬ LÝ XONG
+                                      {lang === 'vi' ? 'XỨ LÝ XONG' : (lang === 'zh' ? '完成修复' : 'RESOLVED')}
                                     </button>
                                   )}
 
@@ -15391,7 +15709,7 @@ export default function App() {
                                         setIsIncidentModalOpen(true);
                                       }}
                                       className="p-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer border-none outline-none"
-                                      title="Chỉnh sửa ghi chú khắc phục"
+                                      title={lang === 'vi' ? "Chỉnh sửa ghi chú khắc phục" : (lang === 'zh' ? "编辑修复说明" : "Edit resolution notes")}
                                     >
                                       <Edit2 className="w-3.5 h-3.5" />
                                     </button>
@@ -15400,7 +15718,7 @@ export default function App() {
                                   <button
                                     onClick={() => handleDeleteIncident(inc.id)}
                                     className="p-2 bg-white/5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all cursor-pointer border-none outline-none"
-                                    title="Xóa biên bản sự cố"
+                                    title={lang === 'vi' ? "Xóa biên bản sự cố" : (lang === 'zh' ? "删除此故障记录" : "Delete incident record")}
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -15425,7 +15743,7 @@ export default function App() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6 flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Chỉ số hoạt động thiết bị</span>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Chỉ số hoạt động thiết bị' : (lang === 'zh' ? '设备运行指数' : 'Equipment Operational Index')}</span>
                     <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
                       {Math.round(((equipments.filter(e => e.status === "NORMAL").length) / (equipments.length || 1)) * 100)}%
                     </h3>
@@ -15439,32 +15757,32 @@ export default function App() {
                 </div>
 
                 <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Công việc bảo trì hoàn thành</span>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Công việc bảo trì hoàn thành' : (lang === 'zh' ? '已完成维护任务' : 'Completed Maintenance Tasks')}</span>
                   <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
                     {maintenanceTasks.filter(t => t.status === "COMPLETED").length} / {maintenanceTasks.length}
                   </h3>
                   <p className="text-[9px] font-mono text-zinc-650 mt-2">
-                    Tỷ lệ: {Math.round(((maintenanceTasks.filter(t => t.status === "COMPLETED").length) / (maintenanceTasks.length || 1)) * 100)}% tổng số việc đã xếp lịch
+                    {lang === 'vi' ? `Tỷ lệ: ${Math.round(((maintenanceTasks.filter(t => t.status === "COMPLETED").length) / (maintenanceTasks.length || 1)) * 100)}% tổng số việc đã xếp lịch` : (lang === 'zh' ? `占比: 已安排任务的 ${Math.round(((maintenanceTasks.filter(t => t.status === "COMPLETED").length) / (maintenanceTasks.length || 1)) * 100)}%` : `Ratio: ${Math.round(((maintenanceTasks.filter(t => t.status === "COMPLETED").length) / (maintenanceTasks.length || 1)) * 100)}% of scheduled tasks`)}
                   </p>
                 </div>
 
                 <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Chưa khắc phục xong</span>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Chưa khắc phục xong' : (lang === 'zh' ? '未完结故障' : 'Unresolved Incidents')}</span>
                   <h3 className="text-3xl font-black italic uppercase text-red-500 tracking-tighter mt-1">
-                    {incidents.filter(i => i.status !== "RESOLVED").length} vụ
+                    {lang === 'vi' ? `${incidents.filter(i => i.status !== "RESOLVED").length} vụ` : (lang === 'zh' ? `${incidents.filter(i => i.status !== "RESOLVED").length} 起` : `${incidents.filter(i => i.status !== "RESOLVED").length} cases`)}
                   </h3>
                   <p className="text-[9px] font-mono text-[#CCFF00] mt-2">
-                    {incidents.filter(i => i.status === "RESOLVED").length} vụ sự cố đã xử lý an toàn dứt điểm
+                    {lang === 'vi' ? `${incidents.filter(i => i.status === "RESOLVED").length} vụ sự cố đã xử lý an toàn dứt điểm` : (lang === 'zh' ? `${incidents.filter(i => i.status === "RESOLVED").length} 起故障已安全解决` : `${incidents.filter(i => i.status === "RESOLVED").length} incidents safely resolved`)}
                   </p>
                 </div>
 
                 <div className="bg-zinc-950 border border-white/5 rounded-3xl p-6">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">Tần suất báo hỏng trung bình</span>
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest italic font-bold">{lang === 'vi' ? 'Tần suất báo hỏng trung bình' : (lang === 'zh' ? '平均故障率' : 'Average Failure Rate')}</span>
                   <h3 className="text-3xl font-black italic uppercase text-white tracking-tighter mt-1">
-                    0.4 vụ / tháng
+                    {lang === 'vi' ? '0.4 vụ / tháng' : (lang === 'zh' ? '0.4 起 / 月' : '0.4 cases / month')}
                   </h3>
                   <p className="text-[9px] font-mono text-zinc-650 mt-2">
-                    Khu vực Cardio ghi nhận phát sinh hỏng hóc cao nhất
+                    {lang === 'vi' ? 'Khu vực Cardio ghi nhận phát sinh hỏng hóc cao nhất' : (lang === 'zh' ? '有氧传动区域故障率最高' : 'Cardio area recorded the highest failure rate')}
                   </p>
                 </div>
               </div>
@@ -15474,17 +15792,17 @@ export default function App() {
                 {/* Equipment Status Chart */}
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">Biểu đồ Trạng thái Cơ sở vật chất</h3>
-                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Trực quan hóa tỷ lệ khả dụng thiết bị phòng GYM</p>
+                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">{lang === 'vi' ? 'Biểu đồ Trạng thái Cơ sở vật chất' : (lang === 'zh' ? '设施状态图表' : 'Facility Status Chart')}</h3>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">{lang === 'vi' ? 'Trực quan hóa tỷ lệ khả dụng thiết bị phòng GYM' : (lang === 'zh' ? '健身房设备可用性比例可视化' : 'Visualization of gym equipment availability rate')}</p>
                   </div>
                   <div className="h-64 mt-6">
                      <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
-                          { name: "BÌNH THƯỜNG", count: equipments.filter(e => e.status === "NORMAL").length },
-                          { name: "ĐANG SỬA", count: equipments.filter(e => e.status === "UNDER_MAINTENANCE").length },
-                          { name: "CẦN SỬA", count: equipments.filter(e => e.status === "MAINTENANCE_REQUIRED").length },
-                          { name: "HỎNG", count: equipments.filter(e => e.status === "BROKEN").length },
+                          { name: lang === 'vi' ? 'BÌNH THƯỜNG' : (lang === 'zh' ? '正常' : 'NORMAL'), count: equipments.filter(e => e.status === "NORMAL").length },
+                          { name: lang === 'vi' ? 'ĐANG SỬA' : (lang === 'zh' ? '正在维修' : 'FIXING'), count: equipments.filter(e => e.status === "UNDER_MAINTENANCE").length },
+                          { name: lang === 'vi' ? 'CẦN SỬA' : (lang === 'zh' ? '需要维护' : 'NEEDS FIX'), count: equipments.filter(e => e.status === "MAINTENANCE_REQUIRED").length },
+                          { name: lang === 'vi' ? 'HỎNG' : (lang === 'zh' ? '损坏' : 'BROKEN'), count: equipments.filter(e => e.status === "BROKEN").length },
                         ]}
                         margin={{ top: 10, right: 10, left: -20, bottom: 5 }}
                       >
@@ -15514,8 +15832,8 @@ export default function App() {
                 {/* Incidents Breakdown Chart */}
                 <div className="bg-zinc-950 border border-white/5 p-6 rounded-[2rem] flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">Mức độ nghiêm trọng của Sự cố</h3>
-                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">Tỷ lệ các mức độ hỏng hóc đã ghi nhận</p>
+                    <h3 className="text-sm font-black uppercase tracking-widest italic text-white">{lang === 'vi' ? 'Mức độ nghiêm trọng của Sự cố' : (lang === 'zh' ? '故障严重程度情况' : 'Incident Severity Distribution')}</h3>
+                    <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider mt-1">{lang === 'vi' ? 'Tỷ lệ các mức độ hỏng hóc đã ghi nhận' : (lang === 'zh' ? '所记录的故障程度占比' : 'Ratio of recorded failure levels')}</p>
                   </div>
                   <div className="h-64 mt-6 flex items-center justify-center font-sans">
                     <div className="w-1/2 h-full">
@@ -15548,21 +15866,21 @@ export default function App() {
                         <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" />
                         <div>
                           <p className="text-zinc-400">HIGH ({incidents.filter(i => i.severity === "HIGH").length})</p>
-                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Cần can thiệp khẩn cấp</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">{lang === 'vi' ? 'Cần can thiệp khẩn cấp' : (lang === 'zh' ? '需立即处理' : 'Requires immediate intervention')}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-orange-500 shrink-0" />
                         <div>
                           <p className="text-zinc-400">MEDIUM ({incidents.filter(i => i.severity === "MEDIUM").length})</p>
-                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Cần lên lịch xử lý</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">{lang === 'vi' ? 'Cần lên lịch xử lý' : (lang === 'zh' ? '需安排维护' : 'Requires scheduled handling')}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-blue-500 shrink-0" />
                         <div>
                           <p className="text-zinc-400">LOW ({incidents.filter(i => i.severity === "LOW").length})</p>
-                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">Lỗi thẩm mỹ nhỏ</p>
+                          <p className="text-[8px] text-zinc-650 font-bold uppercase tracking-widest leading-none">{lang === 'vi' ? 'Lỗi thẩm mỹ nhỏ' : (lang === 'zh' ? '外观或微小缺陷' : 'Minor cosmetic fault')}</p>
                         </div>
                       </div>
                     </div>
@@ -15574,8 +15892,8 @@ export default function App() {
               <div className="bg-zinc-950 border border-white/5 rounded-[2.5rem] p-8">
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h4 className="text-base font-black uppercase text-white italic tracking-tight">Thiết bị cần lưu ý đặc biệt</h4>
-                    <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mt-1">Danh sách máy móc đang báo lỗi rách da cơ, hỏng hóc hoặc đang chờ bảo dưỡng</p>
+                    <h4 className="text-base font-black uppercase text-white italic tracking-tight">{lang === 'vi' ? 'Thiết bị cần lưu ý đặc biệt' : (lang === 'zh' ? '需特别关注的设备' : 'Equipment Requiring Special Attention')}</h4>
+                    <p className="text-[9px] font-mono text-red-500 uppercase tracking-widest mt-1">{lang === 'vi' ? 'Danh sách máy móc đang báo lỗi rách da cơ, hỏng hóc hoặc đang chờ bảo dưỡng' : (lang === 'zh' ? '处于损坏、故障或等待维护状态的设备清单' : 'List of machinery reporting failures, malfunctions or pending maintenance')}</p>
                   </div>
                   <button 
                     onClick={() => {
@@ -15584,14 +15902,14 @@ export default function App() {
                     className="flex items-center gap-2 bg-white/5 border border-white/5 text-zinc-400 hover:text-white px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer border-none outline-none"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    In báo cáo PDF
+                    {lang === 'vi' ? 'In báo cáo PDF' : (lang === 'zh' ? '打印 PDF 报告' : 'Print PDF Report')}
                   </button>
                 </div>
                 
                 <div className="space-y-4">
                   {equipments.filter(e => e.status !== "NORMAL").length === 0 ? (
                     <div className="text-center py-8 text-zinc-500 font-mono text-xs uppercase tracking-widest">
-                      🎉 Tuyệt vời! Tất cả thiết bị phòng tập đều trong trạng thái hoạt động tốt.
+                      {lang === 'vi' ? '🎉 Tuyệt vời! Tất cả thiết bị phòng tập đều trong trạng thái hoạt động tốt.' : (lang === 'zh' ? '🎉 太棒了！所有健身房设备均处于良好运行状态。' : '🎉 Excellent! All gym equipment is in good operating condition.')}
                     </div>
                   ) : (
                     equipments.filter(e => e.status !== "NORMAL").map(e => (
@@ -15599,8 +15917,8 @@ export default function App() {
                         <div className="flex items-center gap-3">
                           <AlertTriangle className={`w-5 h-5 ${e.status === 'BROKEN' ? 'text-red-500' : 'text-orange-500'}`} />
                           <div>
-                            <p className="text-xs font-black uppercase text-white">{e.name}</p>
-                            <p className="text-[9px] font-mono text-zinc-500">{e.location}</p>
+                            <p className="text-xs font-black uppercase text-white">{translateValue(e.name)}</p>
+                            <p className="text-[9px] font-mono text-zinc-500">{translateValue(e.location)}</p>
                           </div>
                         </div>
                         <span className={`px-2.5 py-1 rounded-md text-[8px] font-mono font-bold ${
@@ -15608,7 +15926,7 @@ export default function App() {
                           e.status === 'MAINTENANCE_REQUIRED' ? 'bg-orange-500/10 text-orange-500' :
                           'bg-[#CCFF00]/10 text-[#CCFF00]'
                         }`}>
-                          {e.status}
+                          {e.status === 'BROKEN' ? (lang === 'vi' ? 'HỎNG' : (lang === 'zh' ? '损坏' : 'BROKEN')) : e.status === 'MAINTENANCE_REQUIRED' ? (lang === 'vi' ? 'CẦN BẢO TRÌ' : (lang === 'zh' ? '需要维护' : 'NEEDS FIX')) : e.status === 'UNDER_MAINTENANCE' ? (lang === 'vi' ? 'ĐANG SỬA CHỮA' : (lang === 'zh' ? '正在维修' : 'UNDER REPAIR')) : (lang === 'vi' ? 'BÌNH THƯỜNG' : (lang === 'zh' ? '正常' : 'NORMAL'))}
                         </span>
                       </div>
                     ))
@@ -15892,53 +16210,6 @@ export default function App() {
               className="space-y-8 pb-12 px-5 md:px-5"
             >
               <div className="max-w-2xl mx-auto space-y-8">
-                <div className="bg-zinc-950 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                  <div className="absolute -bottom-6 -right-6 text-7xl font-black text-white/[0.02] italic pointer-events-none group-hover:text-[#CCFF00]/5 transition-all">
-                    LANG
-                  </div>
-                  <h3 className="text-xl font-black italic uppercase mb-6 flex items-center gap-3">
-                    <div className="w-1.5 h-6 bg-[#CCFF00]" />
-                    {t('chooseLang')}
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                      { id: 'vi', label: t('vi'), sub: 'Tiếng Việt' },
-                      { id: 'en', label: t('en'), sub: 'English' },
-                      { id: 'zh', label: t('zh'), sub: 'Chinese' },
-                    ].map((l) => (
-                      <button
-                        key={l.id}
-                        onClick={() => {
-                          const nextLang = l.id;
-                          setLang(nextLang);
-                          addNotification(translations[nextLang]?.['langSwitched'] || translations['en']['langSwitched']);
-                        }}
-                        className={`relative group p-6 rounded-[2rem] border-2 transition-all text-left overflow-hidden ${
-                          lang === l.id 
-                          ? 'bg-[#CCFF00]/10 border-[#CCFF00] shadow-[0_0_30px_rgba(204,255,0,0.1)]' 
-                          : 'bg-white/[0.02] border-white/5 hover:border-white/10'
-                        }`}
-                      >
-                        <div className="relative z-10">
-                          <p className={`text-sm font-black uppercase italic mb-1 ${lang === l.id ? 'text-[#CCFF00]' : 'text-zinc-400'}`}>
-                            {l.label}
-                          </p>
-                          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
-                            {l.sub}
-                          </p>
-                        </div>
-                        {lang === l.id && (
-                          <motion.div 
-                            layoutId="lang-active-desktop"
-                            className="absolute inset-0 bg-gradient-to-br from-[#CCFF00]/5 to-transparent pointer-events-none" 
-                          />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="bg-zinc-950 border border-white/10 p-8 rounded-[2.5rem] shadow-2xl">
                    <h3 className="text-xl font-black italic uppercase mb-6 flex items-center gap-3 text-zinc-500">
                     <div className="w-1.5 h-6 bg-zinc-800" />
@@ -16017,7 +16288,6 @@ export default function App() {
             { id: "members", label: t('members'), icon: Users },
             { id: "packages", label: t('packages'), icon: CreditCard },
             { id: "finance", label: t('finance'), icon: BarChart3, role: "ADMIN" },
-            { id: "settings", label: t('settings'), icon: Settings },
           ].filter(i => !i.role || i.role === user.role).map((item) => {
             const IsActive = activeTab === item.id;
             return (
@@ -18554,7 +18824,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* Reusable Toast Notifications */}
-      <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-[100] flex flex-col gap-3 pointer-events-none w-full sm:w-auto px-4 sm:px-0">
+      <div className="fixed top-4 right-4 sm:top-8 sm:right-8 z-[9999] flex flex-col gap-3 pointer-events-none w-full sm:w-auto px-4 sm:px-0">
         <AnimatePresence>
           {notifications.map((n) => (
             <motion.div
@@ -19959,7 +20229,7 @@ export default function App() {
               <div className="mb-8 flex justify-between items-start">
                 <div>
                   <h3 className="text-2xl font-black italic uppercase tracking-tighter text-[#CCFF00]">
-                    {editingIncident ? "Xử lý sự cố" : "Khai báo sự cố mới"}
+                    {editingIncident ? (lang === 'vi' ? "Xử lý sự cố" : lang === 'zh' ? "处理设备故障" : "Resolve Incident") : (lang === 'vi' ? "Khai báo sự cố mới" : lang === 'zh' ? "报告新故障" : "Report New Incident")}
                   </h3>
                   <p className="text-zinc-500 text-[10px] font-mono uppercase tracking-widest mt-1 italic leading-none">
                     {editingIncident ? "PROCESS_EQUIPMENT_FAULT" : "REPORT_FACILITY_INCIDENT"}
@@ -19979,14 +20249,14 @@ export default function App() {
                     <>
                       {/* Read-only details */}
                       <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-2">
-                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Thiết bị: <span className="text-white font-bold">{editingIncident.equipmentName}</span></div>
-                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Vị trí: <span className="text-white font-bold">{editingIncident.location}</span></div>
-                        <div className="text-[10px] font-mono text-zinc-500 uppercase">Mô tả hỏng: <span className="text-white font-medium">{editingIncident.description}</span></div>
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">{lang === 'vi' ? "Thiết bị" : lang === 'zh' ? "设备" : "Equipment"}: <span className="text-white font-bold">{translateValue(editingIncident.equipmentName)}</span></div>
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">{lang === 'vi' ? "Vị trí" : lang === 'zh' ? "位置" : "Location"}: <span className="text-white font-bold">{translateValue(editingIncident.location)}</span></div>
+                        <div className="text-[10px] font-mono text-zinc-500 uppercase">{lang === 'vi' ? "Mô tả hỏng" : lang === 'zh' ? "故障描述" : "Description"}: <span className="text-white font-medium">{translateValue(editingIncident.description)}</span></div>
                       </div>
 
                       {/* Status select for editing */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Trạng thái sự cố</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Trạng thái sự cố" : lang === 'zh' ? "故障状态" : "Incident Status"}</label>
                         <select 
                           value={editingIncident.status}
                           onChange={(e) => {
@@ -19995,20 +20265,20 @@ export default function App() {
                           }}
                           className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic appearance-none"
                         >
-                          <option value="NEW">MỚI KHAI BÁO</option>
-                          <option value="IN_PROGRESS">ĐANG BẢO TRÌ SỬA</option>
-                          <option value="RESOLVED">ĐÃ XỬ LÝ</option>
+                          <option value="NEW">{lang === 'vi' ? "MỚI KHAI BÁO" : lang === 'zh' ? "新申报" : "NEWLY REPORTED"}</option>
+                          <option value="IN_PROGRESS">{lang === 'vi' ? "ĐANG BẢO TRÌ SỬA" : lang === 'zh' ? "正在维修中" : "REPAIR IN PROGRESS"}</option>
+                          <option value="RESOLVED">{lang === 'vi' ? "ĐÃ XỬ LÝ" : lang === 'zh' ? "已处理" : "RESOLVED"}</option>
                         </select>
                       </div>
 
                       {/* Resolution notes */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Biện pháp khắc phục / Nhật ký sửa chữa</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Biện pháp khắc phục / Nhật ký sửa chữa" : lang === 'zh' ? "解决方案 / 维修日志" : "Resolution Action / Repair Log"}</label>
                         <textarea 
                           required
                           value={editingIncident.resolutionNotes || ""}
                           onChange={(e) => setEditingIncident({ ...editingIncident, resolutionNotes: e.target.value })}
-                          placeholder="Mô tả các bước kỹ thuật đã làm, linh kiện đã thay tế..."
+                          placeholder={lang === 'vi' ? "Mô tả các bước kỹ thuật đã làm, linh kiện đã thay tế..." : lang === 'zh' ? "描述已执行的维修步骤、已更换的零件等..." : "Describe the technical steps taken, replaced components..."}
                           className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs text-white placeholder:text-zinc-700 min-h-[90px]"
                         />
                       </div>
@@ -20017,7 +20287,7 @@ export default function App() {
                     <>
                       {/* Name of Equipment or Location */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Tên thiết bị bị sự cố / Hỏng hóc</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Tên thiết bị bị sự cố / Hỏng hóc" : lang === 'zh' ? "受故障影响的设备名" : "Faulty Equipment Name"}</label>
                         <select 
                           value={newIncident.equipmentName}
                           onChange={(e) => {
@@ -20031,27 +20301,27 @@ export default function App() {
                           className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic"
                         >
                           {equipments.map(e => (
-                            <option key={e.id} value={e.name}>{e.name} (mã: {e.code})</option>
+                            <option key={e.id} value={e.name}>{translateValue(e.name)} ({lang === 'vi' ? 'mã' : (lang === 'zh' ? '编码' : 'code')}: {e.code})</option>
                           ))}
                         </select>
                       </div>
 
                       {/* Location of Incident */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Khu vực / Vị trí phòng GYM</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Khu vực / Vị trí phòng GYM" : lang === 'zh' ? "设备所在区域 / 位置" : "Gym Area / Location"}</label>
                         <input 
                           required
                           type="text" 
                           value={newIncident.location || ""}
                           onChange={(e) => setNewIncident({...newIncident, location: e.target.value})}
-                          placeholder="Khu tập tạ A, Tầng gác lửng..."
+                          placeholder={lang === 'vi' ? "Khu tập tạ A, Tầng gác lửng..." : lang === 'zh' ? "力量训练 A 区、夹层楼..." : "Weight Area A, Mezzanine floor..."}
                           className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-bold text-white uppercase italic"
                         />
                       </div>
 
                       {/* Reporter Name */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Người phát hiện / Báo cáo sự cố</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Người phát hiện / Báo cáo sự cố" : lang === 'zh' ? "发现者 / 事故报告人" : "Incident Reporter"}</label>
                         <input 
                           required
                           type="text" 
@@ -20063,27 +20333,27 @@ export default function App() {
 
                       {/* Description */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Mô tả biểu hiện lỗi / Hỏng hóc chi tiết</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Mô tả biểu hiện lỗi / Hỏng hóc chi tiết" : lang === 'zh' ? "详细故障表现描述" : "Detailed Fault Description"}</label>
                         <textarea 
                           required
                           value={newIncident.description || ""}
                           onChange={(e) => setNewIncident({...newIncident, description: e.target.value})}
-                          placeholder="Máy chạy phát tiếng sột soạt ở trục băng tải, dây cáp bị đứt sợi tơ thép..."
+                          placeholder={lang === 'vi' ? "Máy chạy phát tiếng sột soạt ở trục băng tải, dây cáp bị đứt sợi tơ thép..." : lang === 'zh' ? "跑步机传送带轴有杂音，钢丝绳有破损毛刺..." : "The treadmill conveyor belt makes noises, or wire cable is frayed..."}
                           className="w-full bg-white/5 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs text-white placeholder:text-zinc-700 min-h-[90px]"
                         />
                       </div>
 
                       {/* Severity */}
                       <div>
-                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">Mức độ nghiêm trọng</label>
+                        <label className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-1 italic font-bold">{lang === 'vi' ? "Mức độ nghiêm trọng" : lang === 'zh' ? "严重程度等级" : "Severity Level"}</label>
                         <select 
                           value={newIncident.severity}
                           onChange={(e) => setNewIncident({...newIncident, severity: e.target.value as any})}
                           className="w-full bg-zinc-950 border border-white/10 px-5 py-3 rounded-2xl focus:border-[#CCFF00] outline-none text-xs font-black uppercase italic"
                         >
-                          <option value="LOW">THẤP (LỖI THẨM MỸ, TIẾNG KÊU NHẸ)</option>
-                          <option value="MEDIUM">TRUNG BÌNH (MÁY YẾU, KHÔNG TRƠN TRU)</option>
-                          <option value="HIGH">NGHIÊM TRỌNG // KHẨN CẤP (HỎNG HẲN, ĐỨT DÂY)</option>
+                          <option value="LOW">{lang === 'vi' ? "THẤP (LỖI THẨM MỸ, TIẾNG KÊU NHẸ)" : lang === 'zh' ? "低 (轻微杂音、外观瑕疵)" : "LOW (MINOR NOISE, COSMETIC)"}</option>
+                          <option value="MEDIUM">{lang === 'vi' ? "TRUNG BÌNH (MÁY YẾU, KHÔNG TRƠN TRU)" : lang === 'zh' ? "中等 (设备动力变弱、运转不顺畅)" : "MEDIUM (WEAK, LACKS SMOOTHNESS)"}</option>
+                          <option value="HIGH">{lang === 'vi' ? "NGHIÊM TRỌNG // KHẨN CẤP (HỎNG HẲN, ĐỨT DÂY)" : lang === 'zh' ? "高 // 紧急 (完全损坏、绳缆断裂)" : "HIGH // CRITICAL (TOTAL FAILURE)"}</option>
                         </select>
                       </div>
                     </>
@@ -20095,7 +20365,7 @@ export default function App() {
                     type="submit"
                     className="w-full py-4 bg-[#CCFF00] text-black font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-[#CCFF00]/20 transition-all active:scale-95 text-xs cursor-pointer border-none outline-none"
                   >
-                    {editingIncident ? "LƯU BIÊN BẢN KHẮC PHỤC" : "GỬI BÁO CÁO SỰ CỐ"}
+                    {editingIncident ? (lang === 'vi' ? "LƯU BIÊN BẢN KHẮC PHỤC" : lang === 'zh' ? "保存维修记录清单" : "SAVE RESOLUTION NOTES") : (lang === 'vi' ? "GỬI BÁO CÁO SỰ CỐ" : lang === 'zh' ? "提交故障报告" : "SUBMIT INCIDENT REPORT")}
                   </button>
                 </div>
               </form>
@@ -20263,7 +20533,7 @@ export default function App() {
                         >
                           <option value="0" className="bg-zinc-950">{lang === 'vi' ? '-- CHỌN THIẾT BỊ --' : (lang === 'zh' ? '-- 选择设备 --' : '-- SELECT EQUIPMENT --')}</option>
                           {equipments.map(eq => (
-                            <option key={eq.id} value={eq.id} className="bg-zinc-950">{eq.name.toUpperCase()} ({eq.code})</option>
+                            <option key={eq.id} value={eq.id} className="bg-zinc-950">{translateValue(eq.name).toUpperCase()} ({eq.code})</option>
                           ))}
                         </select>
                     </div>
@@ -20516,6 +20786,7 @@ export default function App() {
           </AnimatePresence>
         </>
       )}
+      <GlobalLanguageSwitcher lang={lang} setLang={setLang} />
     </div>
   );
 }
